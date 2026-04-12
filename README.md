@@ -195,4 +195,25 @@ Di frontend, validasi Role bertujuan untuk memanipulasi User Interface (menyembu
   Komponen `<RequireRole />` bertugas mengecek apabila state role saat ini bukanlah `admin_hr`, maka akan me-return user untuk berpindah halaman via `<Navigate to="/403" />` atau kembali ke Dashboard.
 
 ---
+
+## 🧪 Pengujian (Testing)
+
+Proyek ini dilengkapi dengan suite pengujian otomatis untuk memastikan kualitas kode dan fungsionalitas fitur utama terjaga dengan baik (Reliability).
+
+### 1. Jenis Pengujian
+*   **Unit Test**: Menguji logika bisnis terkecil secara terisolasi. 
+    *   *Contoh:* `Tests\Unit\Helpers\DateHelperTest` menguji fungsi pemformatan tanggal Indonesia.
+*   **Feature/Integration Test**: Menguji alur fitur secara *end-to-end* (Endpoint -> Controller -> Database -> Response).
+    *   *Cakupan:* Autentikasi (Login/Logout), Role-Based Access (Admin vs Employee), Alur Absensi (Clock-in/out), dan Alur Pengajuan Cuti (Submit/Approve).
+
+### 2. Cara Menjalankan Pengujian
+Pastikan Anda berada di direktori `sistem-hr-backend`, lalu jalankan:
+```bash
+php artisan test
+```
+
+### 3. Hasil Pengujian
+Sistem saat ini memiliki **16 Test** (46 Assertions) yang mencakup seluruh poin kritikal aplikasi, semuanya dalam kondisi **PASS**.
+
+---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
