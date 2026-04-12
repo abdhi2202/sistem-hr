@@ -17,15 +17,24 @@ Sistem Manajemen HR adalah aplikasi fullstack (React.js + Laravel) yang dibangun
 ---
 
 ## 📸 Dokumentasi & Screenshot
-*(Catatan: Simpan gambar screenshot pada folder `docs/screenshots/` dan ganti placeholder di bawah ini)*
+
+### A. Tampilan Admin HR
+Digunakan oleh pengguna dengan peran `admin_hr` untuk manajemen seluruh data operasional perusahaan.
 
 | Halaman | Keterangan | Screenshot |
 |---------|------------|------------|
-| **Login** | Halaman autentikasi utama untuk Admin dan Karyawan. | ![Login](docs/screenshots/login.png) |
-| **Dashboard** | Menampilkan statistik jumlah karyawan, absensi, dan cuti tertunda. | ![Dashboard](docs/screenshots/dashboard.png) |
-| **Manajemen Karyawan** | Tabel pengelolaan karyawan lengkap beserta search & filter. | ![Karyawan](docs/screenshots/karyawan.png) |
-| **Riwayat Absensi** | Log waktu clock-in dan clock-out karyawan. | ![Absensi](docs/screenshots/absensi.png) |
-| **Pengajuan Cuti** | Form permohonan cuti dan tabel persetujuan bagi Admin. | ![Cuti](docs/screenshots/cuti.png) |
+| **Dashboard Admin** | Ringkasan statistik operasional, jumlah karyawan, dan status cuti/absensi global. | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) |
+| **Manajemen Karyawan** | Daftar karyawan lengkap dengan fitur CRUD, pencarian, dan filter departemen. | ![Admin Karyawan](docs/screenshots/admin-karyawan.png) |
+| **Master Data** | Pengelolaan data statis seperti Departemen dan Jabatan untuk struktur organisasi. | ![Admin Master](docs/screenshots/admin-master.png) |
+
+### B. Tampilan Karyawan
+Tampilan yang dipersonalisasi untuk peran `karyawan` guna mempermudah aktivitas administrasi harian secara mandiri.
+
+| Halaman | Keterangan | Screenshot |
+|---------|------------|------------|
+| **Dashboard Karyawan** | Selamat datang personal dan ringkasan riwayat absensi terbaru milik pribadi. | ![Employee Dashboard](docs/screenshots/emp-dashboard.png) |
+| **Absensi Mandiri** | Antarmuka khusus untuk melakukan *Clock-in* dan *Clock-out* harian. | ![Employee Absensi](docs/screenshots/emp-absensi.png) |
+| **Pengajuan Cuti** | Form permohonan cuti dan pemantauan status persetujuan dari pihak HR. | ![Employee Cuti](docs/screenshots/emp-cuti.png) |
 
 ---
 
