@@ -92,8 +92,8 @@ npm run dev
 3. Start server Frontend React dengan `npm run dev`.
 4. Buka browser dan arahkan ke alamat URL Frontend (umumnya `http://localhost:5173`).
 5. **Akun Uji Coba Default (berdasarkan Seeder):**
-   * **Admin HR:** `admin@perusahaan.com` / Password: `password`
-   * **Karyawan:** `karyawan@perusahaan.com` / Password: `password`
+   * **Admin HR:** `admin@ssms.test` / Password: `password`
+   * **Karyawan:** `rina.paramita@ssms.test` / Password: `password`
 
 ---
 
