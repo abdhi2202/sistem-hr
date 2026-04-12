@@ -236,4 +236,99 @@ Backend Laravel `sistem-hr-backend` dapat di-deploy ke layanan yang mendukung PH
 *   **Optimalisasi**: Pastikan Anda memasukkan semua variabel `.env` (seperti `DB_HOST`, `DB_PASSWORD`, `APP_KEY`) ke dalam menu "Environment Variables" pada dashboard hosting Anda.
 
 ---
+
+## Deployment Update (April 13, 2026)
+
+Bagian deployment lama di atas masih relevan sebagai gambaran umum, tetapi untuk praktik saat ini ada 3 jalur yang perlu dibedakan dengan jelas:
+
+### 1. Frontend Demo Gratis di Vercel
+Frontend `sistem-hr` sudah berhasil disiapkan untuk mode demo publik gratis.
+
+Langkah singkat:
+1. Import repository ini ke [Vercel](https://vercel.com).
+2. Set **Root Directory** ke `sistem-hr`.
+3. Gunakan preset **Vite**.
+4. Deploy.
+
+Catatan:
+*   File `sistem-hr/.env.production` mengunci production build ke mode `mock`.
+*   Mode ini cocok untuk demo UI tanpa backend live.
+*   Jika nanti ingin menghubungkan ke backend sungguhan, ubah env Vercel:
+    *   `VITE_DATA_SOURCE=http`
+    *   `VITE_API_BASE_URL=https://<url-backend-anda>`
+
+### 2. Backend Tanpa Card di InfinityFree
+Jika akun Render meminta kartu, jalur gratis tanpa card yang lebih realistis untuk backend PHP adalah **InfinityFree**.
+
+File yang sudah disiapkan di repo:
+*   `sistem-hr-backend/.env.infinityfree.example`
+*   `sistem-hr-backend/database/infinityfree-init.sql`
+*   `deploy/infinityfree/webroot/index.php`
+*   `deploy/infinityfree/webroot/.htaccess`
+*   `docs/deploy-infinityfree.md`
+
+Langkah deploy backend di InfinityFree:
+1. Buat hosting account dan domain/subdomain.
+2. Buat database MySQL dari panel InfinityFree.
+3. Import `sistem-hr-backend/database/infinityfree-init.sql` melalui phpMyAdmin.
+4. Salin `sistem-hr-backend/.env.infinityfree.example` menjadi `.env`, lalu isi:
+   *   `APP_KEY`
+   *   `APP_URL`
+   *   `DB_HOST`
+   *   `DB_PORT`
+   *   `DB_DATABASE`
+   *   `DB_USERNAME`
+   *   `DB_PASSWORD`
+5. Upload folder backend Laravel ke root account dengan nama `sistem-hr-backend`.
+6. Pastikan folder tersebut berisi `vendor`, karena InfinityFree tidak menyediakan Composer di server.
+7. Upload `deploy/infinityfree/webroot/index.php` dan `deploy/infinityfree/webroot/.htaccess` ke folder `htdocs` atau `public_html`.
+8. Buka domain InfinityFree Anda untuk mengetes API.
+
+Struktur yang diharapkan di InfinityFree:
+
+```text
+account-root/
+|- htdocs/ atau public_html/
+|  |- index.php
+|  |- .htaccess
+|- sistem-hr-backend/
+   |- app/
+   |- bootstrap/
+   |- config/
+   |- database/
+   |- routes/
+   |- storage/
+   |- vendor/
+   |- artisan
+   |- composer.json
+   |- composer.lock
+   |- .env
+```
+
+Mode backend yang dipakai untuk InfinityFree:
+*   `DB_CONNECTION=mysql`
+*   `SESSION_DRIVER=file`
+*   `CACHE_STORE=file`
+*   `QUEUE_CONNECTION=sync`
+
+Catatan CORS:
+*   Backend production sudah disiapkan menerima origin `https://sistem-hr.vercel.app`
+*   Jika domain frontend berubah, sesuaikan:
+    *   `CORS_ALLOWED_ORIGINS`
+    *   `CORS_ALLOWED_ORIGINS_PATTERNS`
+
+### 3. Render Masih Didukung, Tapi Tidak Selalu Tanpa Card
+Backend juga sudah disiapkan untuk **Render** menggunakan:
+*   `render.yaml`
+*   `sistem-hr-backend/Dockerfile`
+*   `sistem-hr-backend/docker/start.sh`
+
+Namun pada praktiknya, beberapa akun Render meminta penambahan card saat membuat resource database atau service. Jika itu terjadi, gunakan jalur InfinityFree di atas.
+
+### Akun Demo
+Setelah database demo di-import, akun default yang bisa dipakai:
+*   Admin HR: `admin@ssms.test` / `password`
+*   Karyawan: `rina.paramita@ssms.test` / `password`
+
+---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
