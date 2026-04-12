@@ -1,0 +1,44 @@
+databases:
+  - name: sistem-hr-db
+    plan: free
+    databaseName: sistem_hr
+    user: sistem_hr_user
+
+services:
+  - type: web
+    name: sistem-hr-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: sistem-hr-backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Sistem HR API
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_ENABLE_DEMO_SEED
+        value: true
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: sistem-hr-db
+          property: connectionString
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://sistem-hr.vercel.app
+      - key: CORS_ALLOWED_ORIGINS_PATTERNS
+        value: ^https://.*\.vercel\.app$

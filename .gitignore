@@ -10,6 +10,7 @@ sistem-hr-backend/.env
 
 # Build outputs
 sistem-hr/dist/
+sistem-hr/.vercel/
 
 # Laravel specific
 sistem-hr-backend/storage/*.key
