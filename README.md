@@ -216,4 +216,27 @@ php artisan test
 Sistem saat ini memiliki **16 Test** (46 Assertions) yang mencakup seluruh poin kritikal aplikasi, semuanya dalam kondisi **PASS**.
 
 ---
+
+## 🌐 Panduan Deployment (Produksi)
+
+Aplikasi ini menggunakan sistem terpisah antara Backend (API) dan Frontend (SPA). Berikut adalah langkah umum untuk melakukan deployment ke server produksi:
+
+### 1. Deployment Backend (Laravel)
+*   **Server Requirements**: Minimal PHP 8.2, web server (Nginx/Apache), dan database engine.
+*   **Environment**: Pastikan `APP_ENV=production` dan `APP_DEBUG=false` di file `.env`.
+*   **Optimalisasi**: Di server produksi, jalankan perintah berikut untuk mempercepat performa:
+    ```bash
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    ```
+*   **Database**: Lakukan migrasi tanpa mengisi data dummy (`php artisan migrate --force`).
+*   **Keamanan**: Pastikan folder `storage` dan `bootstrap/cache` memiliki izin menulis (*write permissions*) bagi web server.
+
+### 2. Deployment Frontend (React + Vite)
+*   **Build**: Jalankan perintah `npm run build` dari folder `sistem-hr`. Perintah ini akan menghasilkan folder `dist`.
+*   **Hosting**: Upload isi dari folder `dist` tersebut ke web server statis (seperti Vercel, Netlify, atau subfolder di server Nginx Anda).
+*   **Routing SPA**: Karena menggunakan React Router, pastikan web server dikonfigurasi untuk mengarahkan semua kueri ke `index.html` (agar routing di sisi client tetap berjalan saat halaman di-refresh).
+
+---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
