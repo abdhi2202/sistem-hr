@@ -30,8 +30,6 @@ sistem-hr-backend/.phpunit.result.cache
 *.tmp
 sistem-hr/capture.cjs
 
-# Starter Folder
-sistem-hr-backend-starter/
 
 # User artifacts
 # docs/screenshots/ # We keep these as they are part of README
