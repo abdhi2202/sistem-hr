@@ -217,74 +217,63 @@ Sistem saat ini memiliki **16 Test** (46 Assertions) yang mencakup seluruh poin 
 
 ---
 
-## 🌐 Panduan Deployment (Free Tier)
+## Panduan Deployment
 
-Aplikasi ini telah dikonfigurasi agar siap di-deploy secara gratis menggunakan layanan cloud modern.
+Project ini terdiri dari 2 aplikasi terpisah:
+*   **Frontend**: `sistem-hr` menggunakan React + Vite
+*   **Backend**: `sistem-hr-backend` menggunakan Laravel sebagai REST API
 
-### 1. Deployment Frontend (Vercel)
-Aplikasi frontend `sistem-hr` sudah dilengkapi dengan `vercel.json` untuk mendukung routing SPA.
-*   **Platform**: [Vercel](https://vercel.com)
-*   **Konfigurasi Penting**:
-    *   **Root Directory**: `sistem-hr`
-    *   **Framework Preset**: `Vite`
-    *   **Environment Variables**: Tambahkan `VITE_API_BASE_URL` (arahkan ke URL production backend Anda).
+Alur deploy yang direkomendasikan:
+1. Deploy frontend ke Vercel
+2. Deploy backend ke hosting PHP yang mendukung database MySQL atau PostgreSQL
+3. Hubungkan frontend ke URL backend melalui environment variable
 
-### 2. Deployment Backend (Railway / Render)
-Backend Laravel `sistem-hr-backend` dapat di-deploy ke layanan yang mendukung PHP.
-*   **Platform Disarankan**: [Railway.app](https://railway.app) atau [Render.com](https://render.com).
-*   **Database**: Gunakan add-on MySQL atau PostgreSQL pada platform tersebut.
-*   **Optimalisasi**: Pastikan Anda memasukkan semua variabel `.env` (seperti `DB_HOST`, `DB_PASSWORD`, `APP_KEY`) ke dalam menu "Environment Variables" pada dashboard hosting Anda.
+### 1. Persiapan Sebelum Deploy
 
----
+Sebelum melakukan deploy, pastikan:
+*   repository sudah ter-push ke GitHub
+*   frontend dapat di-build dengan `npm run build`
+*   backend dapat dijalankan dengan konfigurasi `.env` yang valid
+*   dependency backend sudah terinstall, termasuk folder `vendor`
+*   database production sudah dibuat
 
-## Deployment Update (April 13, 2026)
+Jika ingin menggunakan data awal untuk pengujian, project ini menggunakan akun demo:
+*   **Admin HR**: `admin@ssms.test` / `password`
+*   **Karyawan**: `rina.paramita@ssms.test` / `password`
 
-Bagian deployment lama di atas masih relevan sebagai gambaran umum, tetapi untuk praktik saat ini ada 3 jalur yang perlu dibedakan dengan jelas:
+### 2. Deploy Frontend ke Vercel
 
-### 1. Frontend Demo Gratis di Vercel
-Frontend `sistem-hr` sudah berhasil disiapkan untuk mode demo publik gratis.
+Frontend berada di folder `sistem-hr` dan sudah dilengkapi `vercel.json` untuk kebutuhan routing SPA.
 
-Langkah singkat:
-1. Import repository ini ke [Vercel](https://vercel.com).
-2. Set **Root Directory** ke `sistem-hr`.
-3. Gunakan preset **Vite**.
-4. Deploy.
+Langkah deploy:
+1. Import repository ini ke [Vercel](https://vercel.com)
+2. Saat diminta konfigurasi project, isi:
+   *   **Root Directory**: `sistem-hr`
+   *   **Framework Preset**: `Vite`
+3. Tambahkan environment variable sesuai kebutuhan
+4. Lakukan deploy
 
-Catatan:
-*   File `sistem-hr/.env.production` mengunci production build ke mode `mock`.
-*   Mode ini cocok untuk demo UI tanpa backend live.
-*   Jika nanti ingin menghubungkan ke backend sungguhan, ubah env Vercel:
-    *   `VITE_DATA_SOURCE=http`
-    *   `VITE_API_BASE_URL=https://<url-backend-anda>`
+Environment variable frontend:
+*   `VITE_DATA_SOURCE=mock`
+  Dipakai jika frontend ingin berjalan dengan data mock
+*   `VITE_DATA_SOURCE=http`
+  Dipakai jika frontend harus terhubung ke backend live
+*   `VITE_API_BASE_URL=https://<url-backend-anda>`
+  Diisi jika `VITE_DATA_SOURCE=http`
 
-### 2. Backend Tanpa Card di InfinityFree
-Jika akun Render meminta kartu, jalur gratis tanpa card yang lebih realistis untuk backend PHP adalah **InfinityFree**.
+Contoh:
+*   `VITE_DATA_SOURCE=http`
+*   `VITE_API_BASE_URL=https://example-backend.com`
 
-File yang sudah disiapkan di repo:
-*   `sistem-hr-backend/.env.infinityfree.example`
-*   `sistem-hr-backend/database/infinityfree-init.sql`
-*   `deploy/infinityfree/webroot/index.php`
-*   `deploy/infinityfree/webroot/.htaccess`
-*   `docs/deploy-infinityfree.md`
+### 3. Deploy Backend Laravel
 
-Langkah deploy backend di InfinityFree:
-1. Buat hosting account dan domain/subdomain.
-2. Buat database MySQL dari panel InfinityFree.
-3. Import `sistem-hr-backend/database/infinityfree-init.sql` melalui phpMyAdmin.
-4. Salin `sistem-hr-backend/.env.infinityfree.example` menjadi `.env`, lalu isi:
-   *   `APP_KEY`
-   *   `APP_URL`
-   *   `DB_HOST`
-   *   `DB_PORT`
-   *   `DB_DATABASE`
-   *   `DB_USERNAME`
-   *   `DB_PASSWORD`
-5. Upload folder backend Laravel ke root account dengan nama `sistem-hr-backend`.
-6. Pastikan folder tersebut berisi `vendor`, karena InfinityFree tidak menyediakan Composer di server.
-7. Upload `deploy/infinityfree/webroot/index.php` dan `deploy/infinityfree/webroot/.htaccess` ke folder `htdocs` atau `public_html`.
-8. Buka domain InfinityFree Anda untuk mengetes API.
+Backend berada di folder `sistem-hr-backend`. Secara umum backend ini memerlukan:
+*   web server PHP
+*   database
+*   file `.env` production
+*   folder `vendor`
 
-Struktur yang diharapkan di InfinityFree:
+Pada shared hosting PHP, struktur deploy yang umum dipakai adalah:
 
 ```text
 account-root/
@@ -296,6 +285,8 @@ account-root/
    |- bootstrap/
    |- config/
    |- database/
+   |- public/
+   |- resources/
    |- routes/
    |- storage/
    |- vendor/
@@ -305,30 +296,106 @@ account-root/
    |- .env
 ```
 
-Mode backend yang dipakai untuk InfinityFree:
-*   `DB_CONNECTION=mysql`
+Keterangan:
+*   file yang diakses browser berada di `htdocs` atau `public_html`
+*   source Laravel disimpan di folder terpisah seperti `sistem-hr-backend`
+*   file `index.php` pada web root meneruskan request ke aplikasi Laravel
+
+### 4. Menyiapkan Database
+
+Buat database production dari panel hosting, lalu isi `.env` backend dengan kredensial database tersebut.
+
+Parameter minimum yang wajib diisi:
+*   `APP_NAME`
+*   `APP_ENV=production`
+*   `APP_KEY`
+*   `APP_DEBUG=false`
+*   `APP_URL=https://<domain-backend-anda>`
+*   `DB_CONNECTION`
+*   `DB_HOST`
+*   `DB_PORT`
+*   `DB_DATABASE`
+*   `DB_USERNAME`
+*   `DB_PASSWORD`
+
+Untuk hosting PHP biasa, konfigurasi yang sederhana dan aman adalah:
 *   `SESSION_DRIVER=file`
 *   `CACHE_STORE=file`
 *   `QUEUE_CONNECTION=sync`
 
-Catatan CORS:
-*   Backend production sudah disiapkan menerima origin `https://sistem-hr.vercel.app`
-*   Jika domain frontend berubah, sesuaikan:
-    *   `CORS_ALLOWED_ORIGINS`
-    *   `CORS_ALLOWED_ORIGINS_PATTERNS`
+Jika frontend tetap berada pada domain yang berbeda, sesuaikan juga:
+*   `CORS_ALLOWED_ORIGINS`
+*   `CORS_ALLOWED_ORIGINS_PATTERNS`
 
-### 3. Render Masih Didukung, Tapi Tidak Selalu Tanpa Card
-Backend juga sudah disiapkan untuk **Render** menggunakan:
-*   `render.yaml`
-*   `sistem-hr-backend/Dockerfile`
-*   `sistem-hr-backend/docker/start.sh`
+Repository ini sudah menyediakan file bantu untuk deploy backend berbasis MySQL:
+*   `sistem-hr-backend/.env.infinityfree.example`
+*   `sistem-hr-backend/database/infinityfree-init.sql`
+*   `deploy/infinityfree/webroot/index.php`
+*   `deploy/infinityfree/webroot/.htaccess`
+*   `docs/deploy-infinityfree.md`
 
-Namun pada praktiknya, beberapa akun Render meminta penambahan card saat membuat resource database atau service. Jika itu terjadi, gunakan jalur InfinityFree di atas.
+Jika hosting menyediakan phpMyAdmin, file SQL tersebut dapat dipakai untuk membuat tabel dan data awal.
 
-### Akun Demo
-Setelah database demo di-import, akun default yang bisa dipakai:
-*   Admin HR: `admin@ssms.test` / `password`
-*   Karyawan: `rina.paramita@ssms.test` / `password`
+### 5. Upload File Backend
+
+Urutan upload yang direkomendasikan:
+1. Upload seluruh folder backend Laravel ke root hosting dengan nama `sistem-hr-backend`
+2. Pastikan folder `vendor` ikut ter-upload
+3. Upload file web root ke folder `htdocs` atau `public_html`
+4. Buat atau upload file `.env` ke dalam folder `sistem-hr-backend`
+
+Jika hosting tidak menyediakan Composer di server, install dependency di lokal terlebih dahulu:
+
+```bash
+cd sistem-hr-backend
+composer install --no-dev --optimize-autoloader
+```
+
+Setelah itu upload hasilnya beserta folder `vendor`.
+
+### 6. Menghubungkan Frontend ke Backend
+
+Setelah backend online, ambil URL backend lalu set environment variable frontend di Vercel:
+*   `VITE_DATA_SOURCE=http`
+*   `VITE_API_BASE_URL=https://<url-backend-anda>`
+
+Kemudian redeploy frontend.
+
+Frontend akan memanggil endpoint seperti:
+*   `/api/login`
+*   `/api/dashboard`
+*   `/api/karyawan`
+*   `/api/absensi/clock-in`
+
+### 7. Verifikasi Setelah Deploy
+
+Setelah frontend dan backend online, lakukan pengecekan berikut:
+1. URL backend dapat diakses
+2. endpoint `/up` merespons normal
+3. login menggunakan akun demo berhasil
+4. dashboard dapat memuat data
+5. tidak ada error CORS di browser
+6. request API frontend mengarah ke domain backend yang benar
+
+### 8. Catatan Khusus Project Ini
+
+Hal yang spesifik untuk repo ini:
+*   frontend menggunakan `VITE_DATA_SOURCE` untuk memilih mode `mock` atau `http`
+*   frontend menggunakan `VITE_API_BASE_URL` sebagai base URL API
+*   backend menggunakan token Sanctum melalui header Bearer
+*   backend production perlu mengizinkan origin frontend yang digunakan
+*   untuk shared hosting, penggunaan session dan cache berbasis file lebih praktis daripada database driver
+
+### 9. Ringkasan Cepat
+
+Jika ingin jalur paling ringkas:
+1. Deploy frontend `sistem-hr` ke Vercel
+2. Deploy backend `sistem-hr-backend` ke hosting PHP + database
+3. Isi `.env` backend
+4. Import database
+5. Set `VITE_DATA_SOURCE=http`
+6. Set `VITE_API_BASE_URL` ke URL backend
+7. Redeploy frontend
 
 ---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
