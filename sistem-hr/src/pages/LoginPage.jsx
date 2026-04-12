@@ -26,8 +26,8 @@ export default function LoginPage() {
   const location = useLocation();
   const { isAuthenticated, login, authMode, authNotice, clearAuthNotice } = useRole();
   const [form, setForm] = useState({
-    email: demoAccounts.admin_hr.email,
-    password: demoAccounts.admin_hr.password,
+    email: '',
+    password: '',
     role: 'admin_hr',
   });
   const [error, setError] = useState('');

@@ -18,7 +18,14 @@ Sistem Manajemen HR adalah aplikasi fullstack (React.js + Laravel) yang dibangun
 
 ## 📸 Dokumentasi & Screenshot
 
-### A. Tampilan Admin HR
+### A. Halaman Login
+Halaman utama autentikasi untuk seluruh pengguna sistem.
+
+| Halaman | Keterangan | Screenshot |
+|---------|------------|------------|
+| **Login** | Form masuk sistem. Secara default form akan kosong untuk keamanan. | ![Login](docs/screenshots/login.png) |
+
+### B. Tampilan Admin HR
 Digunakan oleh pengguna dengan peran `admin_hr` untuk manajemen seluruh data operasional perusahaan.
 
 | Halaman | Keterangan | Screenshot |
