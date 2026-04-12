@@ -97,30 +97,30 @@ npm run dev
 
 ---
 
-## 🌐 Contoh Penggunaan API & Endpoints
+## 🌐 Dokumentasi API & Endpoints (Singkat)
 
-Seluruh endpoint API berada dalam prefix `/api`. Sebagian besar endpoint dilindungi oleh Middleware, yang berarti Anda harus menyertakan Header `Authorization: Bearer <token>`.
+Seluruh endpoint API berada dalam prefix `/api`. Gunakan Header `Authorization: Bearer <token>` untuk endpoint yang dilindungi.
 
-### 1. Autentikasi Login
-* **URL:** `/api/login` | **Method:** `POST`
-* **Body:**
-  ```json
-  {
-    "email": "admin@perusahaan.com",
-    "password": "password"
-  }
-  ```
-* **Response (Success):** Membawa Bearer token yang digunakan untuk mengakses endpoint lain.
+### 1. Autentikasi
+*   **POST** `/api/login`: Login untuk mendapatkan Bearer Token.
+    *   Body: `{"email": "admin@ssms.test", "password": "password"}`
+*   **POST** `/api/logout`: Menghapus sesi aktif.
 
-### 2. Melakukan Clock-in (Karyawan)
-* **URL:** `/api/absensi/clock-in` | **Method:** `POST`
-* **Headers:** `Authorization: Bearer {token}`
-* **Response (Success):** Status berhasil mencatat waktu masuk hari ini.
+### 2. Absensi (Semua Role)
+*   **POST** `/api/absensi/clock-in`: Mencatat waktu masuk.
+*   **POST** `/api/absensi/clock-out`: Mencatat waktu keluar.
+*   **GET** `/api/absensi/riwayat`: Mengambil histori absensi (terfilter otomatis sesuai role).
 
-### 3. Mengambil Data Karyawan (Admin HR)
-* **URL:** `/api/karyawan` | **Method:** `GET`
-* **Headers:** `Authorization: Bearer {token}`
-* **Response:** Array of objects berisi data master karyawan lengkap dengan informasi relasi departemen & jabatan.
+### 3. Pengajuan Cuti
+*   **POST** `/api/cuti/ajukan`: Karyawan membuat pengajuan cuti baru.
+*   **GET** `/api/cuti`: Melihat riwayat/daftar pengajuan cuti.
+*   **POST** `/api/cuti/approve/{id}`: (Admin Only) Menyetujui atau menolak cuti.
+
+### 4. Manajemen & Master Data (Khusus Admin HR)
+*   **GET/POST/PUT/DELETE** `/api/karyawan`: Operasi CRUD data karyawan.
+*   **GET/POST/PUT/DELETE** `/api/departemen` & `/api/jabatan`: Operasi CRUD data master.
+*   **GET** `/api/export/karyawan`: Mengunduh CSV data karyawan.
+*   **GET** `/api/export/absensi`: Mengunduh CSV rekap absensi.
 
 ---
 
