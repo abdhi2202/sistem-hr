@@ -223,6 +223,7 @@ export default function LoginPage() {
                 fullWidth
                 error={Boolean(getFieldError(fieldErrors, 'email'))}
                 helperText={getFieldError(fieldErrors, 'email') || ' '}
+                inputProps={{ autoComplete: 'off' }}
               />
 
               <TextField
@@ -233,6 +234,7 @@ export default function LoginPage() {
                 fullWidth
                 error={Boolean(getFieldError(fieldErrors, 'password'))}
                 helperText={getFieldError(fieldErrors, 'password') || ' '}
+                inputProps={{ autoComplete: 'new-password' }}
               />
 
               {authMode === 'mock' ? (
