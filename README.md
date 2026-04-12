@@ -217,26 +217,23 @@ Sistem saat ini memiliki **16 Test** (46 Assertions) yang mencakup seluruh poin 
 
 ---
 
-## 🌐 Panduan Deployment (Produksi)
+## 🌐 Panduan Deployment (Free Tier)
 
-Aplikasi ini menggunakan sistem terpisah antara Backend (API) dan Frontend (SPA). Berikut adalah langkah umum untuk melakukan deployment ke server produksi:
+Aplikasi ini telah dikonfigurasi agar siap di-deploy secara gratis menggunakan layanan cloud modern.
 
-### 1. Deployment Backend (Laravel)
-*   **Server Requirements**: Minimal PHP 8.2, web server (Nginx/Apache), dan database engine.
-*   **Environment**: Pastikan `APP_ENV=production` dan `APP_DEBUG=false` di file `.env`.
-*   **Optimalisasi**: Di server produksi, jalankan perintah berikut untuk mempercepat performa:
-    ```bash
-    php artisan config:cache
-    php artisan route:cache
-    php artisan view:cache
-    ```
-*   **Database**: Lakukan migrasi tanpa mengisi data dummy (`php artisan migrate --force`).
-*   **Keamanan**: Pastikan folder `storage` dan `bootstrap/cache` memiliki izin menulis (*write permissions*) bagi web server.
+### 1. Deployment Frontend (Vercel)
+Aplikasi frontend `sistem-hr` sudah dilengkapi dengan `vercel.json` untuk mendukung routing SPA.
+*   **Platform**: [Vercel](https://vercel.com)
+*   **Konfigurasi Penting**:
+    *   **Root Directory**: `sistem-hr`
+    *   **Framework Preset**: `Vite`
+    *   **Environment Variables**: Tambahkan `VITE_API_BASE_URL` (arahkan ke URL production backend Anda).
 
-### 2. Deployment Frontend (React + Vite)
-*   **Build**: Jalankan perintah `npm run build` dari folder `sistem-hr`. Perintah ini akan menghasilkan folder `dist`.
-*   **Hosting**: Upload isi dari folder `dist` tersebut ke web server statis (seperti Vercel, Netlify, atau subfolder di server Nginx Anda).
-*   **Routing SPA**: Karena menggunakan React Router, pastikan web server dikonfigurasi untuk mengarahkan semua kueri ke `index.html` (agar routing di sisi client tetap berjalan saat halaman di-refresh).
+### 2. Deployment Backend (Railway / Render)
+Backend Laravel `sistem-hr-backend` dapat di-deploy ke layanan yang mendukung PHP.
+*   **Platform Disarankan**: [Railway.app](https://railway.app) atau [Render.com](https://render.com).
+*   **Database**: Gunakan add-on MySQL atau PostgreSQL pada platform tersebut.
+*   **Optimalisasi**: Pastikan Anda memasukkan semua variabel `.env` (seperti `DB_HOST`, `DB_PASSWORD`, `APP_KEY`) ke dalam menu "Environment Variables" pada dashboard hosting Anda.
 
 ---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
