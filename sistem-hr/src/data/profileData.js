@@ -1,0 +1,28 @@
+export const profileByRole = {
+  admin_hr: {
+    namaLengkap: 'Admin HR Demo',
+    email: 'admin@ssms.test',
+    nomorInduk: 'ADM-001',
+    roleLabel: 'Admin HR',
+    departemen: 'People Ops',
+    jabatan: 'HR Manager',
+    tanggalBergabung: '2022-06-13',
+    statusAktif: 'Aktif',
+    telepon: '+62 811-0000-1001',
+    lokasiKerja: 'Kantor Pusat Makassar',
+    bio: 'Mengelola operasional HR, persetujuan cuti, dan kualitas data karyawan.',
+  },
+  karyawan: {
+    namaLengkap: 'Karyawan Demo',
+    email: 'karyawan@ssms.test',
+    nomorInduk: 'EMP-099',
+    roleLabel: 'Karyawan',
+    departemen: 'Operasional',
+    jabatan: 'Staff Operasional',
+    tanggalBergabung: '2024-01-15',
+    statusAktif: 'Aktif',
+    telepon: '+62 811-0000-2099',
+    lokasiKerja: 'Site Operasional Maros',
+    bio: 'Fokus pada operasional harian, kehadiran tepat waktu, dan pengajuan cuti yang tertib.',
+  },
+};

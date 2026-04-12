@@ -1,0 +1,165 @@
+@baseUrl = http://localhost:8000
+@email = admin@ssms.test
+@password = password
+@token = temp-token
+
+### Login
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Logout
+POST {{baseUrl}}/api/logout
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Dashboard
+GET {{baseUrl}}/api/dashboard
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Daftar Karyawan
+GET {{baseUrl}}/api/karyawan
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Cari Karyawan
+GET {{baseUrl}}/api/karyawan/search?q=rina&dept=Finance
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Tambah Karyawan
+POST {{baseUrl}}/api/karyawan
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nomor_induk": "EMP-020",
+  "nama_lengkap": "Salsa Pramesti",
+  "email": "salsa.pramesti@ssms.test",
+  "departemen": "People Ops",
+  "jabatan": "HR Officer",
+  "tanggal_bergabung": "2026-04-01",
+  "status_aktif": true
+}
+
+### Update Karyawan
+PUT {{baseUrl}}/api/karyawan/1
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nomor_induk": "EMP-001",
+  "nama_lengkap": "Rina Paramita",
+  "email": "rina.paramita@ssms.test",
+  "departemen": "Finance",
+  "jabatan": "Senior Finance Officer",
+  "tanggal_bergabung": "2023-02-14",
+  "status_aktif": true
+}
+
+### Hapus Karyawan
+DELETE {{baseUrl}}/api/karyawan/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Daftar Departemen
+GET {{baseUrl}}/api/departemen
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Simpan Departemen
+POST {{baseUrl}}/api/departemen
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nama_departemen": "Legal"
+}
+
+### Daftar Jabatan
+GET {{baseUrl}}/api/jabatan
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Simpan Jabatan
+POST {{baseUrl}}/api/jabatan
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nama_jabatan": "Legal Officer"
+}
+
+### Riwayat Absensi Admin
+GET {{baseUrl}}/api/absensi/riwayat?scope=admin
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Riwayat Absensi Karyawan
+GET {{baseUrl}}/api/absensi/riwayat?scope=me
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Clock In
+POST {{baseUrl}}/api/absensi/clock-in
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "tanggal": "2026-04-12",
+  "waktu_masuk": "08:00"
+}
+
+### Clock Out
+POST {{baseUrl}}/api/absensi/clock-out
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "tanggal": "2026-04-12",
+  "waktu_keluar": "17:00"
+}
+
+### Daftar Cuti Admin
+GET {{baseUrl}}/api/cuti?scope=admin
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Daftar Cuti Karyawan
+GET {{baseUrl}}/api/cuti?scope=me
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Ajukan Cuti
+POST {{baseUrl}}/api/cuti/ajukan
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "tanggal_mulai": "2026-04-20",
+  "tanggal_selesai": "2026-04-21",
+  "alasan": "Acara keluarga"
+}
+
+### Approve Cuti
+POST {{baseUrl}}/api/cuti/approve/1
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status_pengajuan": "Disetujui"
+}

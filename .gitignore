@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+sistem-hr/node_modules/
+sistem-hr-backend/vendor/
+
+# Environment files
+.env
+sistem-hr/.env
+sistem-hr-backend/.env
+
+# Build outputs
+sistem-hr/dist/
+
+# Laravel specific
+sistem-hr-backend/storage/*.key
+sistem-hr-backend/public/storage
+sistem-hr-backend/bootstrap/cache/*
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+sistem-hr/*.log
+sistem-hr-backend/storage/logs/*.log
+sistem-hr-backend/.phpunit.result.cache
+*.tmp
+sistem-hr/capture.cjs
+
+# Starter Folder
+sistem-hr-backend-starter/
+
+# User artifacts
+# docs/screenshots/ # We keep these as they are part of README
