@@ -40,6 +40,6 @@ services:
       - key: QUEUE_CONNECTION
         value: database
       - key: CORS_ALLOWED_ORIGINS
-        value: https://sistem-hr.vercel.app
+        value: https://sistem-hr.vercel.app,https://sistem-hr-perusahaan.vercel.app
       - key: CORS_ALLOWED_ORIGINS_PATTERNS
-        value: ^https://.*\.vercel\.app$
+        value: #^https://.*\.vercel\.app$#

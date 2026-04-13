@@ -4,6 +4,23 @@ $splitEnvList = static fn (string $value): array => array_values(array_filter(ar
     static fn (string $item) => trim($item),
     explode(',', $value),
 )));
+$normalizeCorsPattern = static function (string $pattern): string {
+    $pattern = trim($pattern);
+
+    if ($pattern === '') {
+        return $pattern;
+    }
+
+    $delimiter = $pattern[0];
+    $lastCharacter = $pattern[strlen($pattern) - 1];
+    $hasExplicitDelimiter = ! ctype_alnum($delimiter) && $delimiter === $lastCharacter;
+
+    if ($hasExplicitDelimiter) {
+        return $pattern;
+    }
+
+    return '#'.str_replace('#', '\#', $pattern).'#';
+};
 
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
@@ -20,10 +37,13 @@ return [
             'https://sistem-hr.vercel.app',
         ]),
     )),
-    'allowed_origins_patterns' => $splitEnvList((string) env(
-        'CORS_ALLOWED_ORIGINS_PATTERNS',
-        '^https://.*\.vercel\.app$',
-    )),
+    'allowed_origins_patterns' => array_values(array_filter(array_map(
+        $normalizeCorsPattern,
+        $splitEnvList((string) env(
+            'CORS_ALLOWED_ORIGINS_PATTERNS',
+            '^https://.*\.vercel\.app$',
+        )),
+    ))),
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 0,
