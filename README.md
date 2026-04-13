@@ -84,7 +84,9 @@ npm install
 
 # Setup environment (sesuaikan URL backend jika perlu)
 cp .env.example .env
-# Isi VITE_API_URL=http://localhost:8000/api di .env Anda
+# Untuk backend lokal:
+# VITE_DATA_SOURCE=http
+# VITE_API_BASE_URL=http://localhost:8000
 
 # Jalankan development server
 npm run dev
@@ -219,183 +221,338 @@ Sistem saat ini memiliki **16 Test** (46 Assertions) yang mencakup seluruh poin 
 
 ## Panduan Deployment
 
-Project ini terdiri dari 2 aplikasi terpisah:
-*   **Frontend**: `sistem-hr` menggunakan React + Vite
-*   **Backend**: `sistem-hr-backend` menggunakan Laravel sebagai REST API
+Project ini sekarang direkomendasikan untuk dideploy dengan arsitektur berikut:
 
-Alur deploy yang direkomendasikan:
-1. Deploy frontend ke Vercel
-2. Deploy backend ke hosting PHP yang mendukung database MySQL atau PostgreSQL
-3. Hubungkan frontend ke URL backend melalui environment variable
+* **Frontend**: `sistem-hr` di-deploy ke **Vercel**
+* **Backend API**: `sistem-hr-backend` di-deploy ke **Render**
+* **Database**: PostgreSQL terkelola di **Render**
 
-### 1. Persiapan Sebelum Deploy
+Panduan di bawah ini mengikuti konfigurasi yang memang dipakai repository ini saat ini.
 
-Sebelum melakukan deploy, pastikan:
-*   repository sudah ter-push ke GitHub
-*   frontend dapat di-build dengan `npm run build`
-*   backend dapat dijalankan dengan konfigurasi `.env` yang valid
-*   dependency backend sudah terinstall, termasuk folder `vendor`
-*   database production sudah dibuat
+### 1. Gambaran Arsitektur Deployment
 
-Jika ingin menggunakan data awal untuk pengujian, project ini menggunakan akun demo:
-*   **Admin HR**: `admin@ssms.test` / `password`
-*   **Karyawan**: `rina.paramita@ssms.test` / `password`
+Alur request production:
 
-### 2. Deploy Frontend ke Vercel
+1. User membuka frontend React di domain Vercel
+2. Frontend memanggil backend Laravel di Render
+3. Backend Laravel terhubung ke database PostgreSQL Render
+4. Autentikasi dilakukan melalui Bearer token API
 
-Frontend berada di folder `sistem-hr` dan sudah dilengkapi `vercel.json` untuk kebutuhan routing SPA.
+Contoh domain production:
 
-Langkah deploy:
-1. Import repository ini ke [Vercel](https://vercel.com)
-2. Saat diminta konfigurasi project, isi:
-   *   **Root Directory**: `sistem-hr`
-   *   **Framework Preset**: `Vite`
-3. Tambahkan environment variable sesuai kebutuhan
-4. Lakukan deploy
+* Frontend: `https://sistem-hr-perusahaan.vercel.app`
+* Backend: `https://sistem-hr-api.onrender.com`
 
-Environment variable frontend:
-*   `VITE_DATA_SOURCE=mock`
-  Dipakai jika frontend ingin berjalan dengan data mock
-*   `VITE_DATA_SOURCE=http`
-  Dipakai jika frontend harus terhubung ke backend live
-*   `VITE_API_BASE_URL=https://<url-backend-anda>`
-  Diisi jika `VITE_DATA_SOURCE=http`
+### 2. Persiapan Sebelum Deploy
 
-Contoh:
-*   `VITE_DATA_SOURCE=http`
-*   `VITE_API_BASE_URL=https://example-backend.com`
+Sebelum mulai, pastikan:
 
-### 3. Deploy Backend Laravel
+* repository sudah ter-push ke GitHub
+* file `render.yaml` di root repository sudah ikut ter-push
+* frontend bisa di-build dengan `npm run build`
+* backend bisa di-build dan dijalankan secara lokal
+* akun Render dan Vercel sudah aktif
 
-Backend berada di folder `sistem-hr-backend`. Secara umum backend ini memerlukan:
-*   web server PHP
-*   database
-*   file `.env` production
-*   folder `vendor`
+Akun demo bawaan seeder untuk pengujian:
 
-Pada shared hosting PHP, struktur deploy yang umum dipakai adalah:
+* **Admin HR**: `admin@ssms.test` / `password`
+* **Karyawan**: `rina.paramita@ssms.test` / `password`
+
+### 3. Deploy Backend Laravel ke Render
+
+Backend menggunakan Docker dan blueprint Render yang sudah tersedia di file `render.yaml`.
+
+#### A. Import Repository ke Render
+
+1. Login ke [Render](https://render.com)
+2. Klik **New** lalu pilih **Blueprint**
+3. Hubungkan repository GitHub ini
+4. Pilih repository `sistem-hr-perusahaan`
+5. Render akan membaca file `render.yaml` dari root repository
+
+#### B. Resource yang Akan Dibuat oleh Blueprint
+
+Blueprint akan membuat:
+
+* 1 PostgreSQL database bernama `sistem-hr-db`
+* 1 web service Docker bernama `sistem-hr-api`
+
+Konfigurasi penting yang sudah diset di `render.yaml`:
+
+* database region: `singapore`
+* web service region: `singapore`
+* backend root directory: `sistem-hr-backend`
+* health check backend: `/up`
+* database dihubungkan ke Laravel melalui `DB_URL`
+
+#### C. Hal Penting Tentang Region Database
+
+Database Render **harus** berada di region yang sama dengan web service.
+
+Untuk project ini:
+
+* database: `singapore`
+* web service: `singapore`
+
+Jika region database berbeda, backend bisa gagal start dengan error seperti:
 
 ```text
-account-root/
-|- htdocs/ atau public_html/
-|  |- index.php
-|  |- .htaccess
-|- sistem-hr-backend/
-   |- app/
-   |- bootstrap/
-   |- config/
-   |- database/
-   |- public/
-   |- resources/
-   |- routes/
-   |- storage/
-   |- vendor/
-   |- artisan
-   |- composer.json
-   |- composer.lock
-   |- .env
+could not translate host name "...dpg..." to address
 ```
 
-Keterangan:
-*   file yang diakses browser berada di `htdocs` atau `public_html`
-*   source Laravel disimpan di folder terpisah seperti `sistem-hr-backend`
-*   file `index.php` pada web root meneruskan request ke aplikasi Laravel
+Jika database telanjur dibuat di region yang salah:
 
-### 4. Menyiapkan Database
+1. backup data jika ada data penting
+2. hapus resource database lama di Render
+3. jalankan **Manual Sync** pada Blueprint
+4. biarkan Render membuat ulang database sesuai `render.yaml`
 
-Buat database production dari panel hosting, lalu isi `.env` backend dengan kredensial database tersebut.
+Catatan: region database Render tidak bisa diedit langsung setelah database dibuat.
 
-Parameter minimum yang wajib diisi:
-*   `APP_NAME`
-*   `APP_ENV=production`
-*   `APP_KEY`
-*   `APP_DEBUG=false`
-*   `APP_URL=https://<domain-backend-anda>`
-*   `DB_CONNECTION`
-*   `DB_HOST`
-*   `DB_PORT`
-*   `DB_DATABASE`
-*   `DB_USERNAME`
-*   `DB_PASSWORD`
+#### D. Environment Variable Backend di Render
 
-Untuk hosting PHP biasa, konfigurasi yang sederhana dan aman adalah:
-*   `SESSION_DRIVER=file`
-*   `CACHE_STORE=file`
-*   `QUEUE_CONNECTION=sync`
+Sebagian besar env backend sudah dikelola blueprint. Nilai penting yang dipakai project ini:
 
-Jika frontend tetap berada pada domain yang berbeda, sesuaikan juga:
-*   `CORS_ALLOWED_ORIGINS`
-*   `CORS_ALLOWED_ORIGINS_PATTERNS`
+* `APP_ENV=production`
+* `APP_DEBUG=false`
+* `APP_ENABLE_DEMO_SEED=true`
+* `DB_CONNECTION=pgsql`
+* `DB_URL` diambil otomatis dari database Render
+* `DB_SSLMODE=require`
+* `SESSION_DRIVER=database`
+* `CACHE_STORE=database`
+* `QUEUE_CONNECTION=database`
+* `CORS_ALLOWED_ORIGINS` berisi domain frontend Vercel
+* `CORS_ALLOWED_ORIGINS_PATTERNS` mengizinkan domain `*.vercel.app`
 
-Repository ini sudah menyediakan file bantu untuk deploy backend berbasis MySQL:
-*   `sistem-hr-backend/.env.infinityfree.example`
-*   `sistem-hr-backend/database/infinityfree-init.sql`
-*   `deploy/infinityfree/webroot/index.php`
-*   `deploy/infinityfree/webroot/.htaccess`
-*   `docs/deploy-infinityfree.md`
+Jika domain frontend production Anda berubah, update juga `CORS_ALLOWED_ORIGINS` di `render.yaml` lalu sync ulang Blueprint.
 
-Jika hosting menyediakan phpMyAdmin, file SQL tersebut dapat dipakai untuk membuat tabel dan data awal.
+#### E. Proses Deploy Backend
 
-### 5. Upload File Backend
+Setelah Blueprint selesai dibuat:
 
-Urutan upload yang direkomendasikan:
-1. Upload seluruh folder backend Laravel ke root hosting dengan nama `sistem-hr-backend`
-2. Pastikan folder `vendor` ikut ter-upload
-3. Upload file web root ke folder `htdocs` atau `public_html`
-4. Buat atau upload file `.env` ke dalam folder `sistem-hr-backend`
+1. buka resource `sistem-hr-api`
+2. tunggu proses build Docker selesai
+3. pastikan status service menjadi **Live**
+4. buka URL health check:
 
-Jika hosting tidak menyediakan Composer di server, install dependency di lokal terlebih dahulu:
-
-```bash
-cd sistem-hr-backend
-composer install --no-dev --optimize-autoloader
+```text
+https://sistem-hr-api.onrender.com/up
 ```
 
-Setelah itu upload hasilnya beserta folder `vendor`.
+Jika backend sehat, Anda akan melihat status **Application up**.
 
-### 6. Menghubungkan Frontend ke Backend
+#### F. Verifikasi Backend dengan Postman
 
-Setelah backend online, ambil URL backend lalu set environment variable frontend di Vercel:
-*   `VITE_DATA_SOURCE=http`
-*   `VITE_API_BASE_URL=https://<url-backend-anda>`
+Sebelum menghubungkan frontend, uji backend lebih dulu.
 
-Kemudian redeploy frontend.
+Request login:
 
-Frontend akan memanggil endpoint seperti:
-*   `/api/login`
-*   `/api/dashboard`
-*   `/api/karyawan`
-*   `/api/absensi/clock-in`
+* Method: `POST`
+* URL: `https://sistem-hr-api.onrender.com/api/login`
+* Header:
+  * `Content-Type: application/json`
+  * `Accept: application/json`
+* Body:
+
+```json
+{
+  "email": "admin@ssms.test",
+  "password": "password"
+}
+```
+
+Jika berhasil, backend akan mengembalikan token dan data user.
+
+### 4. Deploy Frontend React ke Vercel
+
+Frontend berada di folder `sistem-hr` dan sudah dilengkapi `vercel.json` untuk kebutuhan SPA routing.
+
+#### A. Import Repository ke Vercel
+
+1. Login ke [Vercel](https://vercel.com)
+2. Klik **Add New** lalu pilih **Project**
+3. Import repository `sistem-hr-perusahaan`
+
+#### B. Isi Konfigurasi Project
+
+Saat form konfigurasi muncul, gunakan nilai berikut:
+
+* **Root Directory**: `sistem-hr`
+* **Framework Preset**: `Vite`
+* **Build Command**: `npm run build`
+* **Output Directory**: `dist`
+* **Install Command**: biarkan default / kosong
+
+#### C. Environment Variable Frontend di Vercel
+
+Tambahkan env berikut pada project frontend:
+
+* `VITE_DATA_SOURCE=http`
+* `VITE_API_BASE_URL=https://sistem-hr-api.onrender.com`
+* `VITE_API_TIMEOUT_MS=10000`
+
+Catatan penting:
+
+* `VITE_API_BASE_URL` **tidak perlu** ditambah `/api`
+* frontend project ini sudah menambahkan prefix `/api` sendiri di layer endpoint
+* jika Anda mengisi `https://.../api`, request frontend akan menjadi ganda atau salah path
+
+#### D. Deploy Frontend
+
+Setelah konfigurasi diisi:
+
+1. klik **Deploy**
+2. tunggu proses build selesai
+3. buka domain Vercel yang diberikan
+
+Saat pertama kali dibuka, aplikasi seharusnya masuk ke halaman `/login`.
+
+### 5. Menghubungkan Frontend dan Backend
+
+Agar frontend benar-benar memakai backend live:
+
+* `VITE_DATA_SOURCE` harus `http`
+* `VITE_API_BASE_URL` harus mengarah ke domain Render backend
+
+Setelah env diubah di Vercel, lakukan **redeploy** frontend agar env baru benar-benar masuk ke build production.
+
+### 6. Urutan Deploy yang Paling Aman
+
+Urutan deploy yang direkomendasikan:
+
+1. push code terbaru ke GitHub
+2. deploy backend ke Render
+3. pastikan backend lolos health check `/up`
+4. tes login backend via Postman
+5. deploy frontend ke Vercel
+6. buka frontend di tab incognito
+7. login dengan akun demo
+
+Alasan urutan ini:
+
+* frontend production akan gagal login jika backend belum live
+* masalah CORS lebih mudah didiagnosis jika backend sudah terverifikasi lebih dulu
 
 ### 7. Verifikasi Setelah Deploy
 
-Setelah frontend dan backend online, lakukan pengecekan berikut:
-1. URL backend dapat diakses
-2. endpoint `/up` merespons normal
-3. login menggunakan akun demo berhasil
-4. dashboard dapat memuat data
-5. tidak ada error CORS di browser
-6. request API frontend mengarah ke domain backend yang benar
+Lakukan pengecekan berikut setelah frontend dan backend online:
 
-### 8. Catatan Khusus Project Ini
+#### A. Cek Backend
 
-Hal yang spesifik untuk repo ini:
-*   frontend menggunakan `VITE_DATA_SOURCE` untuk memilih mode `mock` atau `http`
-*   frontend menggunakan `VITE_API_BASE_URL` sebagai base URL API
-*   backend menggunakan token Sanctum melalui header Bearer
-*   backend production perlu mengizinkan origin frontend yang digunakan
-*   untuk shared hosting, penggunaan session dan cache berbasis file lebih praktis daripada database driver
+1. buka `https://sistem-hr-api.onrender.com/up`
+2. pastikan muncul status **Application up**
+3. tes `POST /api/login` di Postman
 
-### 9. Ringkasan Cepat
+#### B. Cek Frontend
+
+1. buka frontend Vercel
+2. pastikan halaman awal adalah login
+3. login dengan akun demo admin
+4. pastikan dashboard termuat
+5. buka modul `Karyawan`, `Master`, `Absensi`, dan `Cuti`
+
+#### C. Cek Network di Browser
+
+Jika perlu, buka DevTools browser lalu tab **Network**, kemudian pastikan request frontend benar-benar menuju:
+
+```text
+https://sistem-hr-api.onrender.com/api/...
+```
+
+Bukan ke:
+
+```text
+http://localhost:8000
+```
+
+### 8. Troubleshooting Umum
+
+#### A. Backend Render gagal start karena database host tidak ditemukan
+
+Gejala:
+
+```text
+could not translate host name "...dpg..."
+```
+
+Penyebab umum:
+
+* database dan web service tidak berada di region Render yang sama
+
+Solusi:
+
+1. cek region database
+2. jika salah region, hapus database lama
+3. jalankan **Manual Sync** pada Blueprint
+4. deploy ulang backend
+
+#### B. Frontend Vercel tampil, tetapi login gagal dengan pesan tidak dapat terhubung ke server
+
+Penyebab umum:
+
+* `VITE_API_BASE_URL` salah
+* backend belum live
+* backend CORS belum mengizinkan domain frontend
+
+Solusi:
+
+1. pastikan `VITE_API_BASE_URL=https://sistem-hr-api.onrender.com`
+2. pastikan backend `/up` sehat
+3. pastikan `CORS_ALLOWED_ORIGINS` di Render mencakup domain Vercel
+4. redeploy backend setelah mengubah env atau `render.yaml`
+
+#### C. Frontend langsung masuk dashboard tanpa login
+
+Penyebab umum:
+
+* browser masih menyimpan session lama di `localStorage`
+
+Solusi:
+
+1. buka tab incognito
+2. atau hapus key `sistem-hr-session` dari `localStorage`
+3. refresh halaman
+
+#### D. Login di Postman berhasil, tetapi login di browser gagal
+
+Penyebab umum:
+
+* masalah CORS di backend
+
+Catatan:
+
+* Postman tidak mewakili pembatasan CORS browser
+* browser selalu mengirim `Origin` saat cross-origin request
+
+### 9. Catatan Konfigurasi Project Ini
+
+Hal yang spesifik untuk repository ini:
+
+* frontend memakai `VITE_DATA_SOURCE` untuk memilih mode `mock` atau `http`
+* frontend production harus memakai `VITE_DATA_SOURCE=http`
+* frontend memakai `VITE_API_BASE_URL` tanpa suffix `/api`
+* backend memakai Laravel Sanctum dengan token Bearer
+* backend production memakai PostgreSQL Render
+* backend startup akan menjalankan migration otomatis
+* backend dapat mengisi data demo jika `APP_ENABLE_DEMO_SEED=true`
+* `render.yaml` adalah sumber konfigurasi utama deploy backend
+
+### 10. Ringkasan Cepat
 
 Jika ingin jalur paling ringkas:
-1. Deploy frontend `sistem-hr` ke Vercel
-2. Deploy backend `sistem-hr-backend` ke hosting PHP + database
-3. Isi `.env` backend
-4. Import database
-5. Set `VITE_DATA_SOURCE=http`
-6. Set `VITE_API_BASE_URL` ke URL backend
-7. Redeploy frontend
+
+1. push repository ke GitHub
+2. deploy Blueprint di Render dari file `render.yaml`
+3. pastikan database dan web service sama-sama di region `singapore`
+4. cek backend di `/up`
+5. tes login backend di Postman
+6. deploy frontend `sistem-hr` ke Vercel
+7. isi env frontend:
+   * `VITE_DATA_SOURCE=http`
+   * `VITE_API_BASE_URL=https://sistem-hr-api.onrender.com`
+   * `VITE_API_TIMEOUT_MS=10000`
+8. buka frontend dan login dengan akun demo
 
 ---
 *Dibuat oleh Muhammad Abdhi Priyatama.*
