@@ -15,6 +15,24 @@ export function RoleProvider({ children }) {
   const [authNotice, setAuthNotice] = useState('');
 
   useEffect(() => {
+    if (authServiceMode !== 'http') {
+      return;
+    }
+
+    const hasMockToken =
+      typeof session.token === 'string' && session.token.startsWith('mock-token-');
+    const hasBrokenHttpSession = session.isAuthenticated && !session.token;
+
+    if (!hasMockToken && !hasBrokenHttpSession) {
+      return;
+    }
+
+    const nextSession = buildAnonymousSession();
+    setSession(nextSession);
+    clearSession();
+  }, [session.isAuthenticated, session.token]);
+
+  useEffect(() => {
     return subscribeUnauthorizedEvent((detail) => {
       const nextSession = buildAnonymousSession();
       setSession(nextSession);
