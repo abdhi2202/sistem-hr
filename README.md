@@ -19,8 +19,8 @@ Sistem Manajemen HR adalah aplikasi full-stack berbasis React dan Laravel yang d
 Sebelum melakukan setup backend dan frontend, unduh repository ini melalui terminal:
 
 ```bash
-git clone https://github.com/abdhi2202/sistem-hr-perusahaan.git
-cd sistem-hr-perusahaan
+git clone https://github.com/abdhi2202/sistem-hr.git
+cd sistem-hr
 ```
 
 Setelah proses clone selesai, lanjutkan ke tahap instalasi dan konfigurasi proyek.
@@ -109,14 +109,14 @@ Pastikan perangkat Anda telah memiliki:
 Buka **Terminal PowerShell pertama**, lalu jalankan:
 
 ```powershell
-cd "C:\Users\User\Documents\sistem-hr-perusahaan\sistem-hr-backend"
+cd "C:\Users\User\Documents\sistem-hr\sistem-hr-backend"
 composer install
 
 $env:APP_ENV='local'
 $env:APP_DEBUG='true'
 $env:APP_URL='http://localhost:8000'
 $env:DB_CONNECTION='sqlite'
-$env:DB_DATABASE='C:\Users\User\Documents\sistem-hr-perusahaan\sistem-hr-backend\database\database.sqlite'
+$env:DB_DATABASE='C:\Users\User\Documents\sistem-hr\sistem-hr-backend\database\database.sqlite'
 $env:DB_URL=''
 $env:SESSION_DRIVER='database'
 $env:CACHE_STORE='database'
@@ -139,7 +139,7 @@ Keterangan:
 Buka **Terminal PowerShell kedua**, lalu jalankan:
 
 ```powershell
-cd "C:\Users\User\Documents\sistem-hr-perusahaan\sistem-hr"
+cd "C:\Users\User\Documents\sistem-hr\sistem-hr"
 npm install
 npm run dev
 ```
@@ -326,7 +326,7 @@ Alur request pada lingkungan production:
 
 Contoh domain production:
 
-- Frontend: `https://sistem-hr-perusahaan.vercel.app`
+- Frontend: `https://sistem-hr.vercel.app`
 - Backend: `https://sistem-hr-api.onrender.com`
 
 ### 2. Persiapan Sebelum Deploy
@@ -353,7 +353,7 @@ Backend menggunakan Docker dan blueprint Render yang telah didefinisikan pada fi
 1. Login ke [Render](https://render.com).
 2. Klik **New**, lalu pilih **Blueprint**.
 3. Hubungkan repository GitHub ini.
-4. Pilih repository `sistem-hr-perusahaan`.
+4. Pilih repository `sistem-hr`.
 5. Render akan membaca file `render.yaml` dari root repository.
 
 #### B. Resource yang Dibuat oleh Blueprint
@@ -462,7 +462,7 @@ Frontend berada di folder `sistem-hr` dan telah dilengkapi dengan `vercel.json` 
 
 1. Login ke [Vercel](https://vercel.com).
 2. Klik **Add New**, lalu pilih **Project**.
-3. Import repository `sistem-hr-perusahaan`.
+3. Import repository `sistem-hr`.
 
 #### B. Konfigurasi Project
 
