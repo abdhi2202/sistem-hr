@@ -1,0 +1,627 @@
+1:import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+2:import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+3:import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+4:import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+5:import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+6:import PendingActionsRoundedIcon from '@mui/icons-material/PendingActionsRounded';
+7:import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+8:import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+9:import {
+10:  Alert,
+11:  Box,
+12:  Button,
+13:  Chip,
+14:  Divider,
+15:  Grid2 as Grid,
+16:  InputAdornment,
+17:  MenuItem,
+18:  Paper,
+19:  Select,
+20:  Stack,
+21:  Table,
+22:  TableBody,
+23:  TableCell,
+24:  TableContainer,
+25:  TableHead,
+26:  TableRow,
+27:  TextField,
+28:  Typography,
+29:} from '@mui/material';
+30:import { useMemo, useState } from 'react';
+31:import PageDataShell from '../components/state/PageDataShell';
+32:import { useHrData } from '../context/HrDataContext';
+33:import { useRole } from '../context/RoleContext';
+34:import { getApiErrorMessage } from '../utils/apiFeedback';
+35:
+36:const today = '2026-04-12';
+37:const employeeName = 'Karyawan Demo';
+38:
+39:function formatDate(dateString) {
+40:  return new Intl.DateTimeFormat('id-ID', {
+41:    weekday: 'short',
+42:    day: '2-digit',
+43:    month: 'short',
+44:    year: 'numeric',
+45:  }).format(new Date(dateString));
+46:}
+47:
+48:function getStatusStyle(status) {
+49:  if (status === 'Hadir') {
+50:    return { bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' };
+51:  }
+52:
+53:  if (status === 'Terlambat') {
+54:    return { bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' };
+55:  }
+56:
+57:  if (status === 'Sudah Pulang') {
+58:    return { bgcolor: 'rgba(31, 94, 255, 0.12)', color: 'primary.main' };
+59:  }
+60:
+61:  return { bgcolor: '#eef3fb', color: 'text.secondary' };
+62:}
+63:
+64:function buildEmployeeTodayRecord(records) {
+65:  const todayRecord = records.find((record) => record.tanggal === today);
+66:
+67:  if (todayRecord) {
+68:    return todayRecord;
+69:  }
+70:
+71:  return {
+72:    id: 999,
+73:    tanggal: today,
+74:    waktuMasuk: '',
+75:    waktuKeluar: '',
+76:    status: 'Belum Masuk',
+77:  };
+78:}
+79:
+80:export default function AttendancePage() {
+81:  const { role, name } = useRole();
+82:  const {
+83:    adminAttendanceRecords,
+84:    employeeAttendanceRecords,
+85:    clockIn,
+86:    clockOut,
+87:  } = useHrData();
+88:  const [adminKeyword, setAdminKeyword] = useState('');
+89:  const [adminStatusFilter, setAdminStatusFilter] = useState('Semua Status');
+90:  const [message, setMessage] = useState({ type: 'success', text: '' });
+91:  const [isSubmitting, setIsSubmitting] = useState(false);
+92:  const employeeDisplayName = name || employeeName;
+93:
+94:  const adminTodayRecords = useMemo(
+95:    () => adminAttendanceRecords.filter((record) => record.tanggal === today),
+96:    [adminAttendanceRecords],
+97:  );
+98:
+99:  const adminSummary = useMemo(() => {
+100:    const hadir = adminTodayRecords.filter((record) => record.status === 'Hadir').length;
+101:    const terlambat = adminTodayRecords.filter((record) => record.status === 'Terlambat').length;
+102:    const belumMasuk = adminTodayRecords.filter((record) => record.status === 'Belum Masuk').length;
+103:
+104:    return {
+105:      hadir,
+106:      terlambat,
+107:      belumMasuk,
+108:      total: adminTodayRecords.length,
+109:    };
+110:  }, [adminTodayRecords]);
+111:
+112:  const filteredAdminRecords = useMemo(() => {
+113:    return adminTodayRecords.filter((record) => {
+114:      const matchesKeyword = record.nama
+115:        .toLowerCase()
+116:        .includes(adminKeyword.trim().toLowerCase());
+117:      const matchesStatus =
+118:        adminStatusFilter === 'Semua Status' || record.status === adminStatusFilter;
+119:
+120:      return matchesKeyword && matchesStatus;
+121:    });
+122:  }, [adminKeyword, adminStatusFilter, adminTodayRecords]);
+123:
+124:  const employeeTodayRecord = useMemo(
+125:    () => buildEmployeeTodayRecord(employeeAttendanceRecords),
+126:    [employeeAttendanceRecords],
+127:  );
+128:
+129:  const employeeSummary = useMemo(() => {
+130:    const hadirCount = employeeAttendanceRecords.filter((record) => record.status === 'Hadir').length;
+131:    const terlambatCount = employeeAttendanceRecords.filter((record) => record.status === 'Terlambat').length;
+132:
+133:    return {
+134:      hadirCount,
+135:      terlambatCount,
+136:    };
+137:  }, [employeeAttendanceRecords]);
+138:
+139:  async function handleClockIn() {
+140:    setIsSubmitting(true);
+141:
+142:    try {
+143:      const result = await clockIn();
+144:      setMessage({ type: 'success', text: result.message });
+145:    } catch (error) {
+146:      setMessage({
+147:        type: 'error',
+148:        text: getApiErrorMessage(error, 'Clock-in gagal diproses.'),
+149:      });
+150:    } finally {
+151:      setIsSubmitting(false);
+152:    }
+153:  }
+154:
+155:  async function handleClockOut() {
+156:    setIsSubmitting(true);
+157:
+158:    try {
+159:      const result = await clockOut();
+160:      setMessage({ type: 'success', text: result.message });
+161:    } catch (error) {
+162:      setMessage({
+163:        type: 'error',
+164:        text: getApiErrorMessage(error, 'Clock-out gagal diproses.'),
+165:      });
+166:    } finally {
+167:      setIsSubmitting(false);
+168:    }
+169:  }
+170:
+171:  return (
+172:    <PageDataShell title="absensi">
+173:      <Stack spacing={3}>
+174:      <Box
+175:        sx={{
+176:          px: { xs: 2.5, md: 3.5 },
+177:          py: { xs: 3, md: 3.5 },
+178:          borderRadius: 6,
+179:          background:
+180:            'linear-gradient(135deg, rgba(18, 32, 51, 1), rgba(25, 91, 193, 0.92) 52%, rgba(31, 157, 116, 0.74))',
+181:          color: '#ffffff',
+182:        }}
+183:      >
+184:        <Stack
+185:          direction={{ xs: 'column', lg: 'row' }}
+186:          justifyContent="space-between"
+187:          spacing={2}
+188:          alignItems={{ xs: 'flex-start', lg: 'center' }}
+189:        >
+190:          <Box>
+191:            <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: '0.14em' }}>
+192:              {role === 'admin_hr' ? 'Admin HR' : 'Karyawan'}
+193:            </Typography>
+194:            <Typography variant="h4" sx={{ mt: 0.5, mb: 1 }}>
+195:              Absensi
+196:            </Typography>
+197:            <Typography variant="body1" sx={{ maxWidth: 720, opacity: 0.9 }}>
+198:              {role === 'admin_hr'
+199:                ? 'Pantau kehadiran harian seluruh karyawan, identifikasi keterlambatan, dan tindak lanjuti anomali absensi.'
+200:                : 'Lakukan clock-in dan clock-out dengan cepat, lalu pantau riwayat kehadiran Anda dalam satu tampilan.'}
+201:            </Typography>
+202:          </Box>
+203:          <Chip
+204:            icon={<CalendarMonthRoundedIcon />}
+205:            label={formatDate(today)}
+206:            sx={{
+207:              bgcolor: 'rgba(255,255,255,0.12)',
+208:              color: '#ffffff',
+209:              '& .MuiChip-icon': {
+210:                color: '#ffffff',
+211:              },
+212:            }}
+213:          />
+214:        </Stack>
+215:      </Box>
+216:
+217:      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
+218:
+219:      {role === 'admin_hr' ? (
+220:        <>
+221:          <Grid container spacing={2.5}>
+222:            <Grid size={{ xs: 12, md: 3 }}>
+223:              <Paper sx={{ p: 3 }}>
+224:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+225:                  <Box>
+226:                    <Typography variant="body2" color="text.secondary">
+227:                      Total Hari Ini
+228:                    </Typography>
+229:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+230:                      {adminSummary.total}
+231:                    </Typography>
+232:                  </Box>
+233:                  <Chip
+234:                    icon={<PendingActionsRoundedIcon />}
+235:                    label="Monitoring"
+236:                    sx={{ bgcolor: '#eef3fb', color: 'text.secondary' }}
+237:                  />
+238:                </Stack>
+239:              </Paper>
+240:            </Grid>
+241:            <Grid size={{ xs: 12, md: 3 }}>
+242:              <Paper sx={{ p: 3 }}>
+243:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+244:                  <Box>
+245:                    <Typography variant="body2" color="text.secondary">
+246:                      Hadir
+247:                    </Typography>
+248:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+249:                      {adminSummary.hadir}
+250:                    </Typography>
+251:                  </Box>
+252:                  <Chip
+253:                    icon={<CheckCircleOutlineRoundedIcon />}
+254:                    label="Tepat waktu"
+255:                    sx={{ bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }}
+256:                  />
+257:                </Stack>
+258:              </Paper>
+259:            </Grid>
+260:            <Grid size={{ xs: 12, md: 3 }}>
+261:              <Paper sx={{ p: 3 }}>
+262:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+263:                  <Box>
+264:                    <Typography variant="body2" color="text.secondary">
+265:                      Terlambat
+266:                    </Typography>
+267:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+268:                      {adminSummary.terlambat}
+269:                    </Typography>
+270:                  </Box>
+271:                  <Chip
+272:                    icon={<WarningAmberRoundedIcon />}
+273:                    label="Perlu follow-up"
+274:                    sx={{ bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }}
+275:                  />
+276:                </Stack>
+277:              </Paper>
+278:            </Grid>
+279:            <Grid size={{ xs: 12, md: 3 }}>
+280:              <Paper sx={{ p: 3 }}>
+281:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+282:                  <Box>
+283:                    <Typography variant="body2" color="text.secondary">
+284:                      Belum Masuk
+285:                    </Typography>
+286:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+287:                      {adminSummary.belumMasuk}
+288:                    </Typography>
+289:                  </Box>
+290:                  <Chip
+291:                    icon={<AccessTimeRoundedIcon />}
+292:                    label="Menunggu"
+293:                    sx={{ bgcolor: '#eef3fb', color: 'text.secondary' }}
+294:                  />
+295:                </Stack>
+296:              </Paper>
+297:            </Grid>
+298:          </Grid>
+299:
+300:          <Paper sx={{ p: 3 }}>
+301:            <Stack
+302:              direction={{ xs: 'column', xl: 'row' }}
+303:              justifyContent="space-between"
+304:              spacing={2}
+305:              sx={{ mb: 3 }}
+306:            >
+307:              <Box>
+308:                <Typography variant="h6">Rekap Absensi Hari Ini</Typography>
+309:                <Typography variant="body2" color="text.secondary">
+310:                  Fokus pada kehadiran tanggal {formatDate(today)} untuk seluruh karyawan.
+311:                </Typography>
+312:              </Box>
+313:              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+314:                <TextField
+315:                  placeholder="Cari nama karyawan"
+316:                  value={adminKeyword}
+317:                  onChange={(event) => setAdminKeyword(event.target.value)}
+318:                  sx={{ minWidth: { xs: '100%', md: 260 } }}
+319:                  InputProps={{
+320:                    startAdornment: (
+321:                      <InputAdornment position="start">
+322:                        <SearchRoundedIcon color="action" />
+323:                      </InputAdornment>
+324:                    ),
+325:                  }}
+326:                />
+327:                <Select
+328:                  value={adminStatusFilter}
+329:                  onChange={(event) => setAdminStatusFilter(event.target.value)}
+330:                  sx={{ minWidth: { xs: '100%', md: 190 } }}
+331:                >
+332:                  <MenuItem value="Semua Status">Semua Status</MenuItem>
+333:                  <MenuItem value="Hadir">Hadir</MenuItem>
+334:                  <MenuItem value="Terlambat">Terlambat</MenuItem>
+335:                  <MenuItem value="Belum Masuk">Belum Masuk</MenuItem>
+336:                </Select>
+337:              </Stack>
+338:            </Stack>
+339:
+340:            <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: 1.5 }}>
+341:              {filteredAdminRecords.map((record) => (
+342:                <Paper key={record.id} variant="outlined" sx={{ p: 2.25, borderRadius: 4 }}>
+343:                  <Stack spacing={1.5}>
+344:                    <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+345:                      <Box>
+346:                        <Typography variant="subtitle1">{record.nama}</Typography>
+347:                        <Typography variant="body2" color="text.secondary">
+348:                          {record.departemen}
+349:                        </Typography>
+350:                      </Box>
+351:                      <Chip label={record.status} size="small" sx={getStatusStyle(record.status)} />
+352:                    </Stack>
+353:                    <Divider />
+354:                    <Grid container spacing={1.25}>
+355:                      <Grid size={{ xs: 12, sm: 4 }}>
+356:                        <Typography variant="caption" color="text.secondary">
+357:                          Tanggal
+358:                        </Typography>
+359:                        <Typography variant="body2">{formatDate(record.tanggal)}</Typography>
+360:                      </Grid>
+361:                      <Grid size={{ xs: 12, sm: 4 }}>
+362:                        <Typography variant="caption" color="text.secondary">
+363:                          Waktu Masuk
+364:                        </Typography>
+365:                        <Typography variant="body2">{record.waktuMasuk || '-'}</Typography>
+366:                      </Grid>
+367:                      <Grid size={{ xs: 12, sm: 4 }}>
+368:                        <Typography variant="caption" color="text.secondary">
+369:                          Waktu Keluar
+370:                        </Typography>
+371:                        <Typography variant="body2">{record.waktuKeluar || '-'}</Typography>
+372:                      </Grid>
+373:                    </Grid>
+374:                  </Stack>
+375:                </Paper>
+376:              ))}
+377:              {filteredAdminRecords.length === 0 ? (
+378:                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 4 }}>
+379:                  <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+380:                    Tidak ada data absensi yang cocok
+381:                  </Typography>
+382:                  <Typography variant="body2" color="text.secondary">
+383:                    Coba ubah kata kunci atau filter status.
+384:                  </Typography>
+385:                </Paper>
+386:              ) : null}
+387:            </Box>
+388:
+389:            <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+390:              <Table sx={{ minWidth: 860 }}>
+391:                <TableHead>
+392:                  <TableRow>
+393:                    <TableCell>Nama</TableCell>
+394:                    <TableCell>Departemen</TableCell>
+395:                    <TableCell>Tanggal</TableCell>
+396:                    <TableCell>Waktu Masuk</TableCell>
+397:                    <TableCell>Waktu Keluar</TableCell>
+398:                    <TableCell>Status</TableCell>
+399:                  </TableRow>
+400:                </TableHead>
+401:                <TableBody>
+402:                  {filteredAdminRecords.map((record) => (
+403:                    <TableRow key={record.id} hover>
+404:                      <TableCell>{record.nama}</TableCell>
+405:                      <TableCell>{record.departemen}</TableCell>
+406:                      <TableCell>{formatDate(record.tanggal)}</TableCell>
+407:                      <TableCell>{record.waktuMasuk || '-'}</TableCell>
+408:                      <TableCell>{record.waktuKeluar || '-'}</TableCell>
+409:                      <TableCell>
+410:                        <Chip label={record.status} size="small" sx={getStatusStyle(record.status)} />
+411:                      </TableCell>
+412:                    </TableRow>
+413:                  ))}
+414:                  {filteredAdminRecords.length === 0 ? (
+415:                    <TableRow>
+416:                      <TableCell colSpan={6}>
+417:                        <Box sx={{ py: 6, textAlign: 'center' }}>
+418:                          <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+419:                            Tidak ada data absensi yang cocok
+420:                          </Typography>
+421:                          <Typography variant="body2" color="text.secondary">
+422:                            Coba ubah kata kunci atau filter status.
+423:                          </Typography>
+424:                        </Box>
+425:                      </TableCell>
+426:                    </TableRow>
+427:                  ) : null}
+428:                </TableBody>
+429:              </Table>
+430:            </TableContainer>
+431:          </Paper>
+432:        </>
+433:      ) : (
+434:        <>
+435:          <Grid container spacing={2.5}>
+436:            <Grid size={{ xs: 12, lg: 5 }}>
+437:              <Paper sx={{ p: 3, height: '100%' }}>
+438:                <Stack spacing={2.5}>
+439:                  <Box>
+440:                    <Typography variant="h6">Aksi Absensi Hari Ini</Typography>
+441:                    <Typography variant="body2" color="text.secondary">
+442:                      {employeeDisplayName} dapat mencatat kehadiran langsung dari panel ini.
+443:                    </Typography>
+444:                  </Box>
+445:                  <Grid container spacing={1.5}>
+446:                    <Grid size={{ xs: 12, sm: 6 }}>
+447:                      <Button
+448:                        variant="contained"
+449:                        color="secondary"
+450:                        size="large"
+451:                        fullWidth
+452:                        startIcon={<LoginRoundedIcon />}
+453:                        disabled={isSubmitting}
+454:                        onClick={handleClockIn}
+455:                        sx={{ py: 2.25 }}
+456:                      >
+457:                        Clock-in
+458:                      </Button>
+459:                    </Grid>
+460:                    <Grid size={{ xs: 12, sm: 6 }}>
+461:                      <Button
+462:                        variant="contained"
+463:                        size="large"
+464:                        fullWidth
+465:                        startIcon={<LogoutRoundedIcon />}
+466:                        disabled={isSubmitting}
+467:                        onClick={handleClockOut}
+468:                        sx={{ py: 2.25 }}
+469:                      >
+470:                        Clock-out
+471:                      </Button>
+472:                    </Grid>
+473:                  </Grid>
+474:                  <Paper
+475:                    variant="outlined"
+476:                    sx={{
+477:                      p: 2.5,
+478:                      borderRadius: 4,
+479:                      bgcolor: '#f7f9fd',
+480:                      borderColor: 'divider',
+481:                    }}
+482:                  >
+483:                    <Stack spacing={1.25}>
+484:                      <Typography variant="subtitle1">Status Hari Ini</Typography>
+485:                      <Stack direction="row" justifyContent="space-between" spacing={2}>
+486:                        <Typography variant="body2" color="text.secondary">
+487:                          Waktu Masuk
+488:                        </Typography>
+489:                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+490:                          {employeeTodayRecord.waktuMasuk || '-'}
+491:                        </Typography>
+492:                      </Stack>
+493:                      <Stack direction="row" justifyContent="space-between" spacing={2}>
+494:                        <Typography variant="body2" color="text.secondary">
+495:                          Waktu Keluar
+496:                        </Typography>
+497:                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+498:                          {employeeTodayRecord.waktuKeluar || '-'}
+499:                        </Typography>
+500:                      </Stack>
+501:                      <Stack direction="row" justifyContent="space-between" spacing={2}>
+502:                        <Typography variant="body2" color="text.secondary">
+503:                          Status
+504:                        </Typography>
+505:                        <Chip
+506:                          label={employeeTodayRecord.status}
+507:                          size="small"
+508:                          sx={getStatusStyle(employeeTodayRecord.status)}
+509:                        />
+510:                      </Stack>
+511:                    </Stack>
+512:                  </Paper>
+513:                </Stack>
+514:              </Paper>
+515:            </Grid>
+516:
+517:            <Grid size={{ xs: 12, lg: 7 }}>
+518:              <Grid container spacing={2.5}>
+519:                <Grid size={{ xs: 12, sm: 6 }}>
+520:                  <Paper sx={{ p: 3 }}>
+521:                    <Stack direction="row" justifyContent="space-between" spacing={2}>
+522:                      <Box>
+523:                        <Typography variant="body2" color="text.secondary">
+524:                          Hadir Bulan Ini
+525:                        </Typography>
+526:                        <Typography variant="h5" sx={{ mt: 0.5 }}>
+527:                          {employeeSummary.hadirCount}
+528:                        </Typography>
+529:                      </Box>
+530:                      <Chip
+531:                        icon={<CheckCircleOutlineRoundedIcon />}
+532:                        label="Konsisten"
+533:                        sx={{ bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }}
+534:                      />
+535:                    </Stack>
+536:                  </Paper>
+537:                </Grid>
+538:                <Grid size={{ xs: 12, sm: 6 }}>
+539:                  <Paper sx={{ p: 3 }}>
+540:                    <Stack direction="row" justifyContent="space-between" spacing={2}>
+541:                      <Box>
+542:                        <Typography variant="body2" color="text.secondary">
+543:                          Keterlambatan
+544:                        </Typography>
+545:                        <Typography variant="h5" sx={{ mt: 0.5 }}>
+546:                          {employeeSummary.terlambatCount}
+547:                        </Typography>
+548:                      </Box>
+549:                      <Chip
+550:                        icon={<WarningAmberRoundedIcon />}
+551:                        label="Perlu dijaga"
+552:                        sx={{ bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }}
+553:                      />
+554:                    </Stack>
+555:                  </Paper>
+556:                </Grid>
+557:                <Grid size={{ xs: 12 }}>
+558:                  <Paper sx={{ p: 3 }}>
+559:                    <Typography variant="h6" sx={{ mb: 0.5 }}>
+560:                      Riwayat Absensi Saya
+561:                    </Typography>
+562:                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+563:                      Riwayat kehadiran pribadi untuk beberapa hari terakhir.
+564:                    </Typography>
+565:                    <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: 1.5 }}>
+566:                      {employeeAttendanceRecords.map((record) => (
+567:                        <Paper key={record.id} variant="outlined" sx={{ p: 2.25, borderRadius: 4 }}>
+568:                          <Stack spacing={1.25}>
+569:                            <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+570:                              <Typography variant="subtitle2">{formatDate(record.tanggal)}</Typography>
+571:                              <Chip label={record.status} size="small" sx={getStatusStyle(record.status)} />
+572:                            </Stack>
+573:                            <Divider />
+574:                            <Grid container spacing={1.25}>
+575:                              <Grid size={{ xs: 6 }}>
+576:                                <Typography variant="caption" color="text.secondary">
+577:                                  Masuk
+578:                                </Typography>
+579:                                <Typography variant="body2">{record.waktuMasuk || '-'}</Typography>
+580:                              </Grid>
+581:                              <Grid size={{ xs: 6 }}>
+582:                                <Typography variant="caption" color="text.secondary">
+583:                                  Keluar
+584:                                </Typography>
+585:                                <Typography variant="body2">{record.waktuKeluar || '-'}</Typography>
+586:                              </Grid>
+587:                            </Grid>
+588:                          </Stack>
+589:                        </Paper>
+590:                      ))}
+591:                    </Box>
+592:
+593:                    <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+594:                      <Table sx={{ minWidth: 620 }}>
+595:                        <TableHead>
+596:                          <TableRow>
+597:                            <TableCell>Tanggal</TableCell>
+598:                            <TableCell>Waktu Masuk</TableCell>
+599:                            <TableCell>Waktu Keluar</TableCell>
+600:                            <TableCell>Status</TableCell>
+601:                          </TableRow>
+602:                        </TableHead>
+603:                        <TableBody>
+604:                          {employeeAttendanceRecords.map((record) => (
+605:                            <TableRow key={record.id} hover>
+606:                              <TableCell>{formatDate(record.tanggal)}</TableCell>
+607:                              <TableCell>{record.waktuMasuk || '-'}</TableCell>
+608:                              <TableCell>{record.waktuKeluar || '-'}</TableCell>
+609:                              <TableCell>
+610:                                <Chip label={record.status} size="small" sx={getStatusStyle(record.status)} />
+611:                              </TableCell>
+612:                            </TableRow>
+613:                          ))}
+614:                        </TableBody>
+615:                      </Table>
+616:                    </TableContainer>
+617:                  </Paper>
+618:                </Grid>
+619:              </Grid>
+620:            </Grid>
+621:          </Grid>
+622:        </>
+623:      )}
+624:      </Stack>
+625:    </PageDataShell>
+626:  );
+627:}

@@ -1,0 +1,167 @@
+1:import { apiEndpoints } from './api/endpoints';
+2:import { apiRequest } from './api/client';
+3:import { buildInitialHrData } from './hrDataStorage';
+4:import {
+5:  normalizeAttendanceList,
+6:  normalizeDepartmentItem,
+7:  normalizeDepartmentList,
+8:  normalizeEmployeeItem,
+9:  normalizeEmployeeList,
+10:  normalizeLeaveItem,
+11:  normalizeLeaveList,
+12:  normalizePositionItem,
+13:  normalizePositionList,
+14:  toDepartmentApiPayload,
+15:  toEmployeeApiPayload,
+16:  toLeaveApiPayload,
+17:  toPositionApiPayload,
+18:} from './api/normalizers';
+19:
+20:export const httpHrApi = {
+21:  dashboard: {
+22:    async getSnapshot(role) {
+23:      const fallback = buildInitialHrData();
+24:
+25:      if (role === 'karyawan') {
+26:        const [employeeAttendanceRecords, employeeLeaves] = await Promise.all([
+27:          apiRequest(apiEndpoints.attendance.history, { query: { scope: 'me' } }),
+28:          apiRequest(apiEndpoints.leaves.list, { query: { scope: 'me' } }),
+29:        ]);
+30:
+31:        return {
+32:          ...fallback,
+33:          employeeAttendanceRecords: normalizeAttendanceList(employeeAttendanceRecords),
+34:          employeeLeaves: normalizeLeaveList(employeeLeaves).map((leave) => ({
+35:            id: leave.id,
+36:            tanggalMulai: leave.tanggalMulai,
+37:            tanggalSelesai: leave.tanggalSelesai,
+38:            alasan: leave.alasan,
+39:            status: leave.status,
+40:          })),
+41:        };
+42:      }
+43:
+44:      const [employees, departments, positions, adminAttendanceRecords, adminLeaveRequests] =
+45:        await Promise.all([
+46:          apiRequest(apiEndpoints.employees.list),
+47:          apiRequest(apiEndpoints.departments.list),
+48:          apiRequest(apiEndpoints.positions.list),
+49:          apiRequest(apiEndpoints.attendance.history, { query: { scope: 'admin' } }),
+50:          apiRequest(apiEndpoints.leaves.list, { query: { scope: 'admin' } }),
+51:        ]);
+52:
+53:      return {
+54:        ...fallback,
+55:        employees: normalizeEmployeeList(employees),
+56:        departments: normalizeDepartmentList(departments),
+57:        positions: normalizePositionList(positions),
+58:        adminAttendanceRecords: normalizeAttendanceList(adminAttendanceRecords),
+59:        adminLeaveRequests: normalizeLeaveList(adminLeaveRequests),
+60:      };
+61:    },
+62:  },
+63:
+64:  employees: {
+65:    async create(payload) {
+66:      return normalizeEmployeeItem(
+67:        await apiRequest(apiEndpoints.employees.list, {
+68:          method: 'POST',
+69:          body: toEmployeeApiPayload(payload),
+70:        }),
+71:      );
+72:    },
+73:
+74:    async update(id, payload) {
+75:      return normalizeEmployeeItem(
+76:        await apiRequest(apiEndpoints.employees.detail(id), {
+77:          method: 'PUT',
+78:          body: toEmployeeApiPayload(payload),
+79:        }),
+80:      );
+81:    },
+82:
+83:    async remove(id) {
+84:      return apiRequest(apiEndpoints.employees.detail(id), {
+85:        method: 'DELETE',
+86:      });
+87:    },
+88:  },
+89:
+90:  master: {
+91:    async saveDepartment(payload) {
+92:      return normalizeDepartmentItem(
+93:        await apiRequest(
+94:          payload.id ? apiEndpoints.departments.detail(payload.id) : apiEndpoints.departments.list,
+95:          {
+96:            method: payload.id ? 'PUT' : 'POST',
+97:            body: toDepartmentApiPayload(payload),
+98:          },
+99:        ),
+100:      );
+101:    },
+102:
+103:    async deleteDepartment(id) {
+104:      return apiRequest(apiEndpoints.departments.detail(id), {
+105:        method: 'DELETE',
+106:      });
+107:    },
+108:
+109:    async savePosition(payload) {
+110:      return normalizePositionItem(
+111:        await apiRequest(
+112:          payload.id ? apiEndpoints.positions.detail(payload.id) : apiEndpoints.positions.list,
+113:          {
+114:            method: payload.id ? 'PUT' : 'POST',
+115:            body: toPositionApiPayload(payload),
+116:          },
+117:        ),
+118:      );
+119:    },
+120:
+121:    async deletePosition(id) {
+122:      return apiRequest(apiEndpoints.positions.detail(id), {
+123:        method: 'DELETE',
+124:      });
+125:    },
+126:  },
+127:
+128:  attendance: {
+129:    async clockIn() {
+130:      return apiRequest(apiEndpoints.attendance.clockIn, {
+131:        method: 'POST',
+132:      });
+133:    },
+134:
+135:    async clockOut() {
+136:      return apiRequest(apiEndpoints.attendance.clockOut, {
+137:        method: 'POST',
+138:      });
+139:    },
+140:  },
+141:
+142:  leaves: {
+143:    async createEmployeeRequest(payload) {
+144:      return normalizeLeaveItem(
+145:        await apiRequest(apiEndpoints.leaves.submit, {
+146:          method: 'POST',
+147:          body: toLeaveApiPayload(payload),
+148:        }),
+149:      );
+150:    },
+151:
+152:    async updateAdminRequestStatus(id, status) {
+153:      return normalizeLeaveItem(
+154:        await apiRequest(apiEndpoints.leaves.approve(id), {
+155:          method: 'POST',
+156:          body: { status_pengajuan: status },
+157:        }),
+158:      );
+159:    },
+160:  },
+161:
+162:  system: {
+163:    async reset() {
+164:      throw new Error('Reset data hanya tersedia saat menggunakan sumber data mock.');
+165:    },
+166:  },
+167:};

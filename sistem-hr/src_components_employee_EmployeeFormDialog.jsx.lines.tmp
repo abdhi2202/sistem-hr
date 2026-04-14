@@ -1,0 +1,148 @@
+1:import {
+2:  Alert,
+3:  Button,
+4:  Dialog,
+5:  DialogActions,
+6:  DialogContent,
+7:  DialogTitle,
+8:  FormControl,
+9:  FormControlLabel,
+10:  FormHelperText,
+11:  Grid2 as Grid,
+12:  InputLabel,
+13:  MenuItem,
+14:  Select,
+15:  Stack,
+16:  Switch,
+17:  TextField,
+18:} from '@mui/material';
+19:export default function EmployeeFormDialog({
+20:  open,
+21:  title,
+22:  form,
+23:  departmentOptions,
+24:  isSubmitting,
+25:  onClose,
+26:  onChange,
+27:  onSubmit,
+28:  fieldErrors = {},
+29:  errorMessage = '',
+30:}) {
+31:  return (
+32:    <Dialog open={open} onClose={isSubmitting ? () => {} : onClose} fullWidth maxWidth="md">
+33:      <DialogTitle>{title}</DialogTitle>
+34:      <DialogContent dividers>
+35:        <Stack spacing={2} sx={{ pt: 0.5 }}>
+36:          {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+37:          <Grid container spacing={2}>
+38:          <Grid size={{ xs: 12, md: 6 }}>
+39:            <TextField
+40:              label="Nomor Induk"
+41:              value={form.nomorInduk}
+42:              onChange={(event) => onChange('nomorInduk', event.target.value)}
+43:              fullWidth
+44:              error={Boolean(fieldErrors.nomorInduk)}
+45:              helperText={fieldErrors.nomorInduk || ' '}
+46:            />
+47:          </Grid>
+48:          <Grid size={{ xs: 12, md: 6 }}>
+49:            <TextField
+50:              label="Nama Lengkap"
+51:              value={form.namaLengkap}
+52:              onChange={(event) => onChange('namaLengkap', event.target.value)}
+53:              fullWidth
+54:              error={Boolean(fieldErrors.namaLengkap)}
+55:              helperText={fieldErrors.namaLengkap || ' '}
+56:            />
+57:          </Grid>
+58:          <Grid size={{ xs: 12, md: 6 }}>
+59:            <TextField
+60:              label="Email"
+61:              type="email"
+62:              value={form.email}
+63:              onChange={(event) => onChange('email', event.target.value)}
+64:              fullWidth
+65:              error={Boolean(fieldErrors.email)}
+66:              helperText={fieldErrors.email || ' '}
+67:            />
+68:          </Grid>
+69:          <Grid size={{ xs: 12, md: 6 }}>
+70:            <FormControl fullWidth error={Boolean(fieldErrors.departemen)}>
+71:              <InputLabel id="departemen-label">Departemen</InputLabel>
+72:              <Select
+73:                labelId="departemen-label"
+74:                label="Departemen"
+75:                value={form.departemen}
+76:                onChange={(event) => onChange('departemen', event.target.value)}
+77:              >
+78:                {departmentOptions
+79:                  .filter((option) => option !== 'Semua Departemen')
+80:                  .map((option) => (
+81:                    <MenuItem key={option} value={option}>
+82:                      {option}
+83:                    </MenuItem>
+84:                  ))}
+85:              </Select>
+86:              <FormHelperText>{fieldErrors.departemen || ' '}</FormHelperText>
+87:            </FormControl>
+88:          </Grid>
+89:          <Grid size={{ xs: 12, md: 6 }}>
+90:            <TextField
+91:              label="Jabatan"
+92:              value={form.jabatan}
+93:              onChange={(event) => onChange('jabatan', event.target.value)}
+94:              fullWidth
+95:              error={Boolean(fieldErrors.jabatan)}
+96:              helperText={fieldErrors.jabatan || ' '}
+97:            />
+98:          </Grid>
+99:          <Grid size={{ xs: 12, md: 6 }}>
+100:            <TextField
+101:              label="Tanggal Bergabung"
+102:              type="date"
+103:              value={form.tanggalBergabung}
+104:              onChange={(event) => onChange('tanggalBergabung', event.target.value)}
+105:              fullWidth
+106:              InputLabelProps={{ shrink: true }}
+107:              error={Boolean(fieldErrors.tanggalBergabung)}
+108:              helperText={fieldErrors.tanggalBergabung || ' '}
+109:            />
+110:          </Grid>
+111:          <Grid size={{ xs: 12 }}>
+112:            <Stack
+113:              direction={{ xs: 'column', sm: 'row' }}
+114:              justifyContent="space-between"
+115:              alignItems={{ xs: 'flex-start', sm: 'center' }}
+116:              spacing={2}
+117:              sx={{
+118:                px: 2,
+119:                py: 1.5,
+120:                borderRadius: 3,
+121:                bgcolor: '#f7f9fd',
+122:              }}
+123:            >
+124:              <FormControlLabel
+125:                control={
+126:                  <Switch
+127:                    checked={form.statusAktif}
+128:                    onChange={(event) => onChange('statusAktif', event.target.checked)}
+129:                  />
+130:                }
+131:                label={form.statusAktif ? 'Status aktif' : 'Status nonaktif'}
+132:              />
+133:            </Stack>
+134:          </Grid>
+135:          </Grid>
+136:        </Stack>
+137:      </DialogContent>
+138:      <DialogActions sx={{ px: 3, py: 2 }}>
+139:        <Button onClick={onClose} disabled={isSubmitting}>
+140:          Batal
+141:        </Button>
+142:        <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
+143:          Simpan
+144:        </Button>
+145:      </DialogActions>
+146:    </Dialog>
+147:  );
+148:}

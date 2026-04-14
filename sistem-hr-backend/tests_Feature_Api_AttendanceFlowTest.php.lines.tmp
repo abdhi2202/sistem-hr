@@ -1,0 +1,39 @@
+1:<?php
+2:
+3:namespace Tests\Feature\Api;
+4:
+5:use App\Models\User;
+6:use Illuminate\Foundation\Testing\RefreshDatabase;
+7:use Laravel\Sanctum\Sanctum;
+8:use Tests\TestCase;
+9:
+10:class AttendanceFlowTest extends TestCase
+11:{
+12:    use RefreshDatabase;
+13:
+14:    protected function setUp(): void
+15:    {
+16:        parent::setUp();
+17:
+18:        $this->seed(\Database\Seeders\DemoHrSeeder::class);
+19:    }
+20:
+21:    public function test_employee_can_clock_in_and_clock_out_on_same_day(): void
+22:    {
+23:        $employee = User::query()->where('email', 'rina.paramita@ssms.test')->firstOrFail();
+24:
+25:        Sanctum::actingAs($employee);
+26:
+27:        $this->postJson('/api/absensi/clock-in')
+28:            ->assertOk()
+29:            ->assertJsonPath('data.status', 'Hadir');
+30:
+31:        $this->postJson('/api/absensi/clock-out')
+32:            ->assertOk()
+33:            ->assertJsonPath('data.status', 'Hadir');
+34:
+35:        $this->getJson('/api/absensi/riwayat?scope=me')
+36:            ->assertOk()
+37:            ->assertJsonPath('data.0.karyawan.nama_lengkap', 'Rina Paramita');
+38:    }
+39:}

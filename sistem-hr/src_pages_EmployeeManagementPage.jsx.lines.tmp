@@ -1,0 +1,623 @@
+1:import AddRoundedIcon from '@mui/icons-material/AddRounded';
+2:import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+3:import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+4:import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
+5:import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+6:import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined';
+7:import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+8:import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+9:import {
+10:  Alert,
+11:  Box,
+12:  Button,
+13:  Chip,
+14:  Divider,
+15:  FormControl,
+16:  Grid2 as Grid,
+17:  InputAdornment,
+18:  InputLabel,
+19:  MenuItem,
+20:  Paper,
+21:  Select,
+22:  Stack,
+23:  Table,
+24:  TableBody,
+25:  TableCell,
+26:  TableContainer,
+27:  TableHead,
+28:  TableRow,
+29:  TextField,
+30:  Typography,
+31:} from '@mui/material';
+32:import { useMemo, useState } from 'react';
+33:import DeleteEmployeeDialog from '../components/employee/DeleteEmployeeDialog';
+34:import EmployeeFormDialog from '../components/employee/EmployeeFormDialog';
+35:import AccessDeniedState from '../components/state/AccessDeniedState';
+36:import PageDataShell from '../components/state/PageDataShell';
+37:import { useHrData } from '../context/HrDataContext';
+38:import { useRole } from '../context/RoleContext';
+39:import { emptyEmployeeForm } from '../data/employeeData';
+40:import { getApiErrorMessage, getApiFieldErrors, getFieldError } from '../utils/apiFeedback';
+41:
+42:function formatDate(dateString) {
+43:  return new Intl.DateTimeFormat('id-ID', {
+44:    day: '2-digit',
+45:    month: 'short',
+46:    year: 'numeric',
+47:  }).format(new Date(dateString));
+48:}
+49:
+50:function downloadCsv(rows) {
+51:  const header = [
+52:    'Nomor Induk',
+53:    'Nama Lengkap',
+54:    'Email',
+55:    'Departemen',
+56:    'Jabatan',
+57:    'Tanggal Bergabung',
+58:    'Status Aktif',
+59:  ];
+60:
+61:  const csvRows = rows.map((employee) =>
+62:    [
+63:      employee.nomorInduk,
+64:      employee.namaLengkap,
+65:      employee.email,
+66:      employee.departemen,
+67:      employee.jabatan,
+68:      employee.tanggalBergabung,
+69:      employee.statusAktif ? 'Aktif' : 'Nonaktif',
+70:    ]
+71:      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+72:      .join(','),
+73:  );
+74:
+75:  const csvContent = [header.join(','), ...csvRows].join('\n');
+76:  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+77:  const url = URL.createObjectURL(blob);
+78:  const link = document.createElement('a');
+79:  link.href = url;
+80:  link.download = 'daftar-karyawan.csv';
+81:  document.body.appendChild(link);
+82:  link.click();
+83:  link.remove();
+84:  URL.revokeObjectURL(url);
+85:}
+86:
+87:export default function EmployeeManagementPage() {
+88:  const { role } = useRole();
+89:  const { employees, departments, addEmployee, updateEmployee, deleteEmployee } = useHrData();
+90:  const [keyword, setKeyword] = useState('');
+91:  const [departmentFilter, setDepartmentFilter] = useState('Semua Departemen');
+92:  const [dialogOpen, setDialogOpen] = useState(false);
+93:  const [deleteOpen, setDeleteOpen] = useState(false);
+94:  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+95:  const [selectedEmployee, setSelectedEmployee] = useState(null);
+96:  const [form, setForm] = useState(emptyEmployeeForm);
+97:  const [message, setMessage] = useState({ type: 'success', text: '' });
+98:  const [formErrors, setFormErrors] = useState({});
+99:  const [formErrorMessage, setFormErrorMessage] = useState('');
+100:  const [isSubmitting, setIsSubmitting] = useState(false);
+101:  const departmentOptions = useMemo(
+102:    () => ['Semua Departemen', ...departments.map((department) => department.nama)],
+103:    [departments],
+104:  );
+105:
+106:  const filteredEmployees = useMemo(() => {
+107:    return employees.filter((employee) => {
+108:      const matchesKeyword = employee.namaLengkap
+109:        .toLowerCase()
+110:        .includes(keyword.trim().toLowerCase());
+111:      const matchesDepartment =
+112:        departmentFilter === 'Semua Departemen' || employee.departemen === departmentFilter;
+113:
+114:      return matchesKeyword && matchesDepartment;
+115:    });
+116:  }, [departmentFilter, employees, keyword]);
+117:
+118:  const summary = useMemo(() => {
+119:    const aktif = employees.filter((employee) => employee.statusAktif).length;
+120:    const nonaktif = employees.length - aktif;
+121:    return {
+122:      total: employees.length,
+123:      aktif,
+124:      nonaktif,
+125:    };
+126:  }, [employees]);
+127:
+128:  if (role !== 'admin_hr') {
+129:    return (
+130:      <AccessDeniedState description="Modul manajemen karyawan hanya tersedia untuk Admin HR." />
+131:    );
+132:  }
+133:
+134:  function resetForm() {
+135:    setForm(emptyEmployeeForm);
+136:    setEditingEmployeeId(null);
+137:    setFormErrors({});
+138:    setFormErrorMessage('');
+139:  }
+140:
+141:  function handleOpenCreate() {
+142:    resetForm();
+143:    setDialogOpen(true);
+144:  }
+145:
+146:  function handleOpenEdit(employee) {
+147:    setEditingEmployeeId(employee.id);
+148:    setForm({
+149:      nomorInduk: employee.nomorInduk,
+150:      namaLengkap: employee.namaLengkap,
+151:      email: employee.email,
+152:      departemen: employee.departemen,
+153:      jabatan: employee.jabatan,
+154:      tanggalBergabung: employee.tanggalBergabung,
+155:      statusAktif: employee.statusAktif,
+156:    });
+157:    setDialogOpen(true);
+158:  }
+159:
+160:  function handleCloseDialog() {
+161:    setDialogOpen(false);
+162:    resetForm();
+163:  }
+164:
+165:  function handleChange(field, value) {
+166:    setForm((current) => ({
+167:      ...current,
+168:      [field]: value,
+169:    }));
+170:    setFormErrors((current) => ({
+171:      ...current,
+172:      [field]: undefined,
+173:    }));
+174:  }
+175:
+176:  async function handleSubmit() {
+177:    const nextFormErrors = {};
+178:
+179:    if (
+180:      !form.nomorInduk ||
+181:      !form.namaLengkap ||
+182:      !form.email ||
+183:      !form.departemen ||
+184:      !form.jabatan ||
+185:      !form.tanggalBergabung
+186:    ) {
+187:      if (!form.nomorInduk) nextFormErrors.nomorInduk = 'Nomor induk wajib diisi.';
+188:      if (!form.namaLengkap) nextFormErrors.namaLengkap = 'Nama lengkap wajib diisi.';
+189:      if (!form.email) nextFormErrors.email = 'Email wajib diisi.';
+190:      if (!form.departemen) nextFormErrors.departemen = 'Departemen wajib dipilih.';
+191:      if (!form.jabatan) nextFormErrors.jabatan = 'Jabatan wajib diisi.';
+192:      if (!form.tanggalBergabung) nextFormErrors.tanggalBergabung = 'Tanggal bergabung wajib diisi.';
+193:      setFormErrors(nextFormErrors);
+194:      setFormErrorMessage('Semua field utama harus diisi sebelum menyimpan data karyawan.');
+195:      return;
+196:    }
+197:
+198:    setIsSubmitting(true);
+199:    setFormErrors({});
+200:    setFormErrorMessage('');
+201:
+202:    try {
+203:      if (editingEmployeeId) {
+204:        await updateEmployee(editingEmployeeId, form);
+205:        setMessage({ type: 'success', text: 'Data karyawan berhasil diperbarui.' });
+206:      } else {
+207:        await addEmployee(form);
+208:        setMessage({ type: 'success', text: 'Karyawan baru berhasil ditambahkan.' });
+209:      }
+210:
+211:      handleCloseDialog();
+212:    } catch (error) {
+213:      const apiFieldErrors = getApiFieldErrors(error);
+214:      setFormErrors({
+215:        nomorInduk: getFieldError(apiFieldErrors, 'nomor_induk', 'nomorInduk'),
+216:        namaLengkap: getFieldError(apiFieldErrors, 'nama_lengkap', 'namaLengkap'),
+217:        email: getFieldError(apiFieldErrors, 'email'),
+218:        departemen: getFieldError(apiFieldErrors, 'departemen'),
+219:        jabatan: getFieldError(apiFieldErrors, 'jabatan'),
+220:        tanggalBergabung: getFieldError(apiFieldErrors, 'tanggal_bergabung', 'tanggalBergabung'),
+221:      });
+222:      setFormErrorMessage(getApiErrorMessage(error, 'Gagal menyimpan data karyawan.'));
+223:      setMessage({ type: 'error', text: '' });
+224:    } finally {
+225:      setIsSubmitting(false);
+226:    }
+227:  }
+228:
+229:  function handleAskDelete(employee) {
+230:    setSelectedEmployee(employee);
+231:    setDeleteOpen(true);
+232:  }
+233:
+234:  async function handleConfirmDelete() {
+235:    if (!selectedEmployee) {
+236:      return;
+237:    }
+238:
+239:    setIsSubmitting(true);
+240:
+241:    try {
+242:      await deleteEmployee(selectedEmployee.id);
+243:      setDeleteOpen(false);
+244:      setSelectedEmployee(null);
+245:      setMessage({ type: 'success', text: 'Data karyawan berhasil dihapus.' });
+246:    } catch (error) {
+247:      setMessage({
+248:        type: 'error',
+249:        text: getApiErrorMessage(error, 'Data karyawan gagal dihapus.'),
+250:      });
+251:    } finally {
+252:      setIsSubmitting(false);
+253:    }
+254:  }
+255:
+256:  return (
+257:    <PageDataShell title="data karyawan">
+258:      <Stack spacing={3}>
+259:      <Box
+260:        sx={{
+261:          px: { xs: 2.5, md: 3.5 },
+262:          py: { xs: 3, md: 3.5 },
+263:          borderRadius: 6,
+264:          background:
+265:            'linear-gradient(135deg, rgba(18, 32, 51, 1), rgba(25, 91, 193, 0.92) 56%, rgba(31, 157, 116, 0.70))',
+266:          color: '#ffffff',
+267:        }}
+268:      >
+269:        <Stack
+270:          direction={{ xs: 'column', lg: 'row' }}
+271:          justifyContent="space-between"
+272:          spacing={2}
+273:          alignItems={{ xs: 'flex-start', lg: 'center' }}
+274:        >
+275:          <Box>
+276:            <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: '0.14em' }}>
+277:              Admin HR
+278:            </Typography>
+279:            <Typography variant="h4" sx={{ mt: 0.5, mb: 1 }}>
+280:              Manajemen Karyawan
+281:            </Typography>
+282:            <Typography variant="body1" sx={{ maxWidth: 720, opacity: 0.9 }}>
+283:              Kelola daftar karyawan, lakukan pencarian cepat, filter departemen, dan siapkan data
+284:              untuk ekspor CSV.
+285:            </Typography>
+286:          </Box>
+287:          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+288:            <Button
+289:              variant="contained"
+290:              color="secondary"
+291:              startIcon={<DownloadRoundedIcon />}
+292:              disabled={isSubmitting}
+293:              onClick={() => downloadCsv(filteredEmployees)}
+294:            >
+295:              Export CSV
+296:            </Button>
+297:            <Button
+298:              variant="outlined"
+299:              startIcon={<AddRoundedIcon />}
+300:              onClick={handleOpenCreate}
+301:              disabled={isSubmitting}
+302:            >
+303:              Tambah Karyawan
+304:            </Button>
+305:          </Stack>
+306:        </Stack>
+307:      </Box>
+308:
+309:      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
+310:
+311:      <Grid container spacing={2.5}>
+312:        <Grid size={{ xs: 12, md: 4 }}>
+313:          <Paper sx={{ p: 3 }}>
+314:            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+315:              <Box>
+316:                <Typography variant="body2" color="text.secondary">
+317:                  Total Karyawan
+318:                </Typography>
+319:                <Typography variant="h5" sx={{ mt: 0.5 }}>
+320:                  {summary.total}
+321:                </Typography>
+322:              </Box>
+323:              <Chip
+324:                icon={<PeopleAltOutlinedIcon />}
+325:                label="Semua data"
+326:                sx={{ bgcolor: 'rgba(31, 94, 255, 0.12)', color: 'primary.main' }}
+327:              />
+328:            </Stack>
+329:          </Paper>
+330:        </Grid>
+331:        <Grid size={{ xs: 12, md: 4 }}>
+332:          <Paper sx={{ p: 3 }}>
+333:            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+334:              <Box>
+335:                <Typography variant="body2" color="text.secondary">
+336:                  Karyawan Aktif
+337:                </Typography>
+338:                <Typography variant="h5" sx={{ mt: 0.5 }}>
+339:                  {summary.aktif}
+340:                </Typography>
+341:              </Box>
+342:              <Chip
+343:                label="Aktif"
+344:                sx={{ bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }}
+345:              />
+346:            </Stack>
+347:          </Paper>
+348:        </Grid>
+349:        <Grid size={{ xs: 12, md: 4 }}>
+350:          <Paper sx={{ p: 3 }}>
+351:            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+352:              <Box>
+353:                <Typography variant="body2" color="text.secondary">
+354:                  Karyawan Nonaktif
+355:                </Typography>
+356:                <Typography variant="h5" sx={{ mt: 0.5 }}>
+357:                  {summary.nonaktif}
+358:                </Typography>
+359:              </Box>
+360:              <Chip
+361:                icon={<PersonOffOutlinedIcon />}
+362:                label="Perlu review"
+363:                sx={{ bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }}
+364:              />
+365:            </Stack>
+366:          </Paper>
+367:        </Grid>
+368:      </Grid>
+369:
+370:      <Paper sx={{ p: 3 }}>
+371:        <Stack
+372:          direction={{ xs: 'column', xl: 'row' }}
+373:          justifyContent="space-between"
+374:          spacing={2}
+375:          sx={{ mb: 3 }}
+376:        >
+377:          <Box>
+378:            <Typography variant="h6">Daftar Karyawan</Typography>
+379:            <Typography variant="body2" color="text.secondary">
+380:              Gunakan pencarian nama dan filter departemen untuk mempersempit data.
+381:            </Typography>
+382:          </Box>
+383:          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+384:            <TextField
+385:              placeholder="Cari berdasarkan nama"
+386:              value={keyword}
+387:              onChange={(event) => setKeyword(event.target.value)}
+388:              sx={{ minWidth: { xs: '100%', md: 280 } }}
+389:              InputProps={{
+390:                startAdornment: (
+391:                  <InputAdornment position="start">
+392:                    <SearchRoundedIcon color="action" />
+393:                  </InputAdornment>
+394:                ),
+395:              }}
+396:            />
+397:            <FormControl sx={{ minWidth: { xs: '100%', md: 220 } }}>
+398:              <InputLabel id="filter-departemen-label">Filter Departemen</InputLabel>
+399:              <Select
+400:                labelId="filter-departemen-label"
+401:                label="Filter Departemen"
+402:                value={departmentFilter}
+403:                onChange={(event) => setDepartmentFilter(event.target.value)}
+404:                startAdornment={
+405:                  <InputAdornment position="start">
+406:                    <FilterAltOutlinedIcon color="action" sx={{ ml: 1 }} />
+407:                  </InputAdornment>
+408:                }
+409:              >
+410:                {departmentOptions.map((option) => (
+411:                  <MenuItem key={option} value={option}>
+412:                    {option}
+413:                  </MenuItem>
+414:                ))}
+415:              </Select>
+416:            </FormControl>
+417:          </Stack>
+418:        </Stack>
+419:
+420:        <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: 1.5 }}>
+421:          {filteredEmployees.map((employee) => (
+422:            <Paper key={employee.id} variant="outlined" sx={{ p: 2.25, borderRadius: 4 }}>
+423:              <Stack spacing={1.5}>
+424:                <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+425:                  <Box sx={{ minWidth: 0 }}>
+426:                    <Typography variant="subtitle1" noWrap>
+427:                      {employee.namaLengkap}
+428:                    </Typography>
+429:                    <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+430:                      {employee.email}
+431:                    </Typography>
+432:                  </Box>
+433:                  <Chip
+434:                    label={employee.statusAktif ? 'Aktif' : 'Nonaktif'}
+435:                    size="small"
+436:                    sx={
+437:                      employee.statusAktif
+438:                        ? { bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }
+439:                        : { bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }
+440:                    }
+441:                  />
+442:                </Stack>
+443:                <Divider />
+444:                <Grid container spacing={1.25}>
+445:                  <Grid size={{ xs: 12, sm: 6 }}>
+446:                    <Typography variant="caption" color="text.secondary">
+447:                      Nomor Induk
+448:                    </Typography>
+449:                    <Typography variant="body2">{employee.nomorInduk}</Typography>
+450:                  </Grid>
+451:                  <Grid size={{ xs: 12, sm: 6 }}>
+452:                    <Typography variant="caption" color="text.secondary">
+453:                      Departemen
+454:                    </Typography>
+455:                    <Typography variant="body2">{employee.departemen}</Typography>
+456:                  </Grid>
+457:                  <Grid size={{ xs: 12, sm: 6 }}>
+458:                    <Typography variant="caption" color="text.secondary">
+459:                      Jabatan
+460:                    </Typography>
+461:                    <Typography variant="body2">{employee.jabatan}</Typography>
+462:                  </Grid>
+463:                  <Grid size={{ xs: 12, sm: 6 }}>
+464:                    <Typography variant="caption" color="text.secondary">
+465:                      Bergabung
+466:                    </Typography>
+467:                    <Typography variant="body2">{formatDate(employee.tanggalBergabung)}</Typography>
+468:                  </Grid>
+469:                </Grid>
+470:                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+471:                  <Button
+472:                    variant="outlined"
+473:                    startIcon={<EditOutlinedIcon />}
+474:                    onClick={() => handleOpenEdit(employee)}
+475:                    fullWidth
+476:                  >
+477:                    Edit
+478:                  </Button>
+479:                  <Button
+480:                    variant="outlined"
+481:                    color="error"
+482:                    startIcon={<DeleteOutlineRoundedIcon />}
+483:                    onClick={() => handleAskDelete(employee)}
+484:                    fullWidth
+485:                  >
+486:                    Hapus
+487:                  </Button>
+488:                </Stack>
+489:              </Stack>
+490:            </Paper>
+491:          ))}
+492:          {filteredEmployees.length === 0 ? (
+493:            <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 4 }}>
+494:              <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+495:                Tidak ada karyawan yang cocok
+496:              </Typography>
+497:              <Typography variant="body2" color="text.secondary">
+498:                Coba ubah kata kunci pencarian atau pilih departemen lain.
+499:              </Typography>
+500:            </Paper>
+501:          ) : null}
+502:        </Box>
+503:
+504:        <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+505:          <Table sx={{ minWidth: 880 }}>
+506:            <TableHead>
+507:              <TableRow>
+508:                <TableCell>Nomor Induk</TableCell>
+509:                <TableCell>Nama Karyawan</TableCell>
+510:                <TableCell>Departemen</TableCell>
+511:                <TableCell>Jabatan</TableCell>
+512:                <TableCell>Tanggal Bergabung</TableCell>
+513:                <TableCell>Status</TableCell>
+514:                <TableCell align="right">Aksi</TableCell>
+515:              </TableRow>
+516:            </TableHead>
+517:            <TableBody>
+518:              {filteredEmployees.map((employee) => (
+519:                <TableRow key={employee.id} hover>
+520:                  <TableCell>{employee.nomorInduk}</TableCell>
+521:                  <TableCell>
+522:                    <Stack spacing={0.25}>
+523:                      <Typography variant="subtitle2">{employee.namaLengkap}</Typography>
+524:                      <Typography variant="body2" color="text.secondary">
+525:                        {employee.email}
+526:                      </Typography>
+527:                    </Stack>
+528:                  </TableCell>
+529:                  <TableCell>{employee.departemen}</TableCell>
+530:                  <TableCell>{employee.jabatan}</TableCell>
+531:                  <TableCell>{formatDate(employee.tanggalBergabung)}</TableCell>
+532:                  <TableCell>
+533:                    <Chip
+534:                      label={employee.statusAktif ? 'Aktif' : 'Nonaktif'}
+535:                      size="small"
+536:                      sx={
+537:                        employee.statusAktif
+538:                          ? {
+539:                              bgcolor: 'rgba(31, 157, 116, 0.12)',
+540:                              color: 'secondary.main',
+541:                            }
+542:                          : {
+543:                              bgcolor: 'rgba(237, 138, 24, 0.14)',
+544:                              color: '#c26a00',
+545:                            }
+546:                      }
+547:                    />
+548:                  </TableCell>
+549:                  <TableCell align="right">
+550:                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+551:                      <Button
+552:                        variant="text"
+553:                        startIcon={<EditOutlinedIcon />}
+554:                        onClick={() => handleOpenEdit(employee)}
+555:                      >
+556:                        Edit
+557:                      </Button>
+558:                      <Button
+559:                        variant="text"
+560:                        color="error"
+561:                        startIcon={<DeleteOutlineRoundedIcon />}
+562:                        onClick={() => handleAskDelete(employee)}
+563:                      >
+564:                        Hapus
+565:                      </Button>
+566:                    </Stack>
+567:                  </TableCell>
+568:                </TableRow>
+569:              ))}
+570:              {filteredEmployees.length === 0 ? (
+571:                <TableRow>
+572:                  <TableCell colSpan={7}>
+573:                    <Box
+574:                      sx={{
+575:                        py: 6,
+576:                        textAlign: 'center',
+577:                      }}
+578:                    >
+579:                      <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+580:                        Tidak ada karyawan yang cocok
+581:                      </Typography>
+582:                      <Typography variant="body2" color="text.secondary">
+583:                        Coba ubah kata kunci pencarian atau pilih departemen lain.
+584:                      </Typography>
+585:                    </Box>
+586:                  </TableCell>
+587:                </TableRow>
+588:              ) : null}
+589:            </TableBody>
+590:          </Table>
+591:        </TableContainer>
+592:      </Paper>
+593:
+594:      <EmployeeFormDialog
+595:        open={dialogOpen}
+596:        title={editingEmployeeId ? 'Edit Karyawan' : 'Tambah Karyawan'}
+597:        form={form}
+598:        departmentOptions={departmentOptions}
+599:        onClose={isSubmitting ? () => {} : handleCloseDialog}
+600:        onChange={handleChange}
+601:        onSubmit={handleSubmit}
+602:        isSubmitting={isSubmitting}
+603:        fieldErrors={formErrors}
+604:        errorMessage={formErrorMessage}
+605:      />
+606:
+607:      <DeleteEmployeeDialog
+608:        open={deleteOpen}
+609:        employeeName={selectedEmployee?.namaLengkap ?? ''}
+610:        onClose={() => {
+611:          if (isSubmitting) {
+612:            return;
+613:          }
+614:          setDeleteOpen(false);
+615:          setSelectedEmployee(null);
+616:        }}
+617:        onConfirm={handleConfirmDelete}
+618:        isSubmitting={isSubmitting}
+619:      />
+620:      </Stack>
+621:    </PageDataShell>
+622:  );
+623:}

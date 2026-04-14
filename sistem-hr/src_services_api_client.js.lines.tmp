@@ -1,0 +1,97 @@
+1:import { apiConfig } from './config';
+2:import { ApiError } from './errors';
+3:import { emitForbiddenEvent, emitUnauthorizedEvent } from './events';
+4:import { getAccessToken } from '../authStorage';
+5:
+6:function buildUrl(path, query) {
+7:  const url = new URL(path, apiConfig.baseUrl);
+8:
+9:  if (query) {
+10:    Object.entries(query).forEach(([key, value]) => {
+11:      if (value !== undefined && value !== null && value !== '') {
+12:        url.searchParams.set(key, String(value));
+13:      }
+14:    });
+15:  }
+16:
+17:  return url.toString();
+18:}
+19:
+20:async function parseResponse(response) {
+21:  const contentType = response.headers.get('content-type') ?? '';
+22:  const isJson = contentType.includes('application/json');
+23:  const payload = isJson ? await response.json() : await response.text();
+24:
+25:  if (!response.ok) {
+26:    const validationErrors =
+27:      typeof payload === 'object' && payload !== null && typeof payload.errors === 'object'
+28:        ? payload.errors
+29:        : {};
+30:    const firstFieldError = Object.values(validationErrors)[0];
+31:    const message =
+32:      typeof payload === 'object' && payload !== null
+33:        ? payload.message ??
+34:          (Array.isArray(firstFieldError) ? firstFieldError[0] : firstFieldError) ??
+35:          'Permintaan API gagal diproses.'
+36:        : 'Permintaan API gagal diproses.';
+37:
+38:    if (response.status === 401) {
+39:      emitUnauthorizedEvent({
+40:        status: response.status,
+41:        message,
+42:      });
+43:    }
+44:
+45:    if (response.status === 403) {
+46:      emitForbiddenEvent({
+47:        status: response.status,
+48:        message,
+49:      });
+50:    }
+51:
+52:    throw new ApiError(message, {
+53:      status: response.status,
+54:      payload,
+55:    });
+56:  }
+57:
+58:  return payload;
+59:}
+60:
+61:export async function apiRequest(path, options = {}) {
+62:  const controller = new AbortController();
+63:  const timeoutId = window.setTimeout(() => controller.abort(), apiConfig.timeoutMs);
+64:  const token = options.skipAuth ? '' : getAccessToken();
+65:
+66:  try {
+67:    const response = await fetch(buildUrl(path, options.query), {
+68:      method: options.method ?? 'GET',
+69:      headers: {
+70:        Accept: 'application/json',
+71:        'Content-Type': 'application/json',
+72:        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+73:        ...(options.headers ?? {}),
+74:      },
+75:      body: options.body ? JSON.stringify(options.body) : undefined,
+76:      signal: controller.signal,
+77:    });
+78:
+79:    return await parseResponse(response);
+80:  } catch (error) {
+81:    if (error?.name === 'AbortError') {
+82:      throw new ApiError('Permintaan ke server melebihi batas waktu. Coba lagi.', {
+83:        status: 408,
+84:      });
+85:    }
+86:
+87:    if (error instanceof ApiError) {
+88:      throw error;
+89:    }
+90:
+91:    throw new ApiError('Tidak dapat terhubung ke server. Periksa backend lalu coba lagi.', {
+92:      status: 503,
+93:    });
+94:  } finally {
+95:    window.clearTimeout(timeoutId);
+96:  }
+97:}

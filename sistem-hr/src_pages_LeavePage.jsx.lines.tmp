@@ -1,0 +1,630 @@
+1:import ApprovalRoundedIcon from '@mui/icons-material/ApprovalRounded';
+2:import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+3:import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+4:import EventBusyRoundedIcon from '@mui/icons-material/EventBusyRounded';
+5:import PendingActionsRoundedIcon from '@mui/icons-material/PendingActionsRounded';
+6:import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+7:import {
+8:  Alert,
+9:  Box,
+10:  Button,
+11:  Chip,
+12:  Divider,
+13:  Grid2 as Grid,
+14:  InputAdornment,
+15:  MenuItem,
+16:  Paper,
+17:  Select,
+18:  Stack,
+19:  Table,
+20:  TableBody,
+21:  TableCell,
+22:  TableContainer,
+23:  TableHead,
+24:  TableRow,
+25:  TextField,
+26:  Typography,
+27:} from '@mui/material';
+28:import { useMemo, useState } from 'react';
+29:import PageDataShell from '../components/state/PageDataShell';
+30:import { useHrData } from '../context/HrDataContext';
+31:import { useRole } from '../context/RoleContext';
+32:import { emptyLeaveForm } from '../data/leaveData';
+33:import { getApiErrorMessage, getApiFieldErrors, getFieldError } from '../utils/apiFeedback';
+34:
+35:function formatDate(dateString) {
+36:  return new Intl.DateTimeFormat('id-ID', {
+37:    day: '2-digit',
+38:    month: 'short',
+39:    year: 'numeric',
+40:  }).format(new Date(dateString));
+41:}
+42:
+43:function formatPeriod(start, end) {
+44:  return `${formatDate(start)} - ${formatDate(end)}`;
+45:}
+46:
+47:function getStatusStyle(status) {
+48:  if (status === 'Disetujui') {
+49:    return { bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' };
+50:  }
+51:
+52:  if (status === 'Pending') {
+53:    return { bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' };
+54:  }
+55:
+56:  return { bgcolor: '#eef3fb', color: 'text.secondary' };
+57:}
+58:
+59:export default function LeavePage() {
+60:  const { role } = useRole();
+61:  const {
+62:    adminLeaveRequests,
+63:    employeeLeaves,
+64:    createLeaveRequest,
+65:    updateLeaveStatus,
+66:  } = useHrData();
+67:  const [form, setForm] = useState(emptyLeaveForm);
+68:  const [keyword, setKeyword] = useState('');
+69:  const [statusFilter, setStatusFilter] = useState('Semua Status');
+70:  const [message, setMessage] = useState({ type: 'success', text: '' });
+71:  const [formErrors, setFormErrors] = useState({});
+72:  const [isSubmitting, setIsSubmitting] = useState(false);
+73:
+74:  const adminSummary = useMemo(() => {
+75:    const pending = adminLeaveRequests.filter((leave) => leave.status === 'Pending').length;
+76:    const approved = adminLeaveRequests.filter((leave) => leave.status === 'Disetujui').length;
+77:    const rejected = adminLeaveRequests.filter((leave) => leave.status === 'Ditolak').length;
+78:
+79:    return {
+80:      total: adminLeaveRequests.length,
+81:      pending,
+82:      approved,
+83:      rejected,
+84:    };
+85:  }, [adminLeaveRequests]);
+86:
+87:  const filteredAdminLeaves = useMemo(() => {
+88:    return adminLeaveRequests.filter((leave) => {
+89:      const matchesKeyword = leave.nama.toLowerCase().includes(keyword.trim().toLowerCase());
+90:      const matchesStatus = statusFilter === 'Semua Status' || leave.status === statusFilter;
+91:      return matchesKeyword && matchesStatus;
+92:    });
+93:  }, [adminLeaveRequests, keyword, statusFilter]);
+94:
+95:  const employeeSummary = useMemo(() => {
+96:    const pending = employeeLeaves.filter((leave) => leave.status === 'Pending').length;
+97:    const approved = employeeLeaves.filter((leave) => leave.status === 'Disetujui').length;
+98:    return {
+99:      total: employeeLeaves.length,
+100:      pending,
+101:      approved,
+102:    };
+103:  }, [employeeLeaves]);
+104:
+105:  function handleFormChange(field, value) {
+106:    setForm((current) => ({
+107:      ...current,
+108:      [field]: value,
+109:    }));
+110:    setFormErrors((current) => ({
+111:      ...current,
+112:      [field]: undefined,
+113:    }));
+114:  }
+115:
+116:  async function handleSubmitLeave() {
+117:    const nextErrors = {};
+118:
+119:    if (!form.tanggalMulai || !form.tanggalSelesai || !form.alasan.trim()) {
+120:      if (!form.tanggalMulai) nextErrors.tanggalMulai = 'Tanggal mulai wajib diisi.';
+121:      if (!form.tanggalSelesai) nextErrors.tanggalSelesai = 'Tanggal selesai wajib diisi.';
+122:      if (!form.alasan.trim()) nextErrors.alasan = 'Alasan cuti wajib diisi.';
+123:      setFormErrors(nextErrors);
+124:      setMessage({
+125:        type: 'error',
+126:        text: 'Lengkapi tanggal mulai, tanggal selesai, dan alasan cuti terlebih dahulu.',
+127:      });
+128:      return;
+129:    }
+130:
+131:    setIsSubmitting(true);
+132:    setFormErrors({});
+133:
+134:    try {
+135:      await createLeaveRequest(form);
+136:      setForm(emptyLeaveForm);
+137:      setMessage({
+138:        type: 'success',
+139:        text: 'Pengajuan cuti berhasil dibuat dan menunggu persetujuan Admin HR.',
+140:      });
+141:    } catch (error) {
+142:      const apiFieldErrors = getApiFieldErrors(error);
+143:      setFormErrors({
+144:        tanggalMulai: getFieldError(apiFieldErrors, 'tanggal_mulai', 'tanggalMulai'),
+145:        tanggalSelesai: getFieldError(apiFieldErrors, 'tanggal_selesai', 'tanggalSelesai'),
+146:        alasan: getFieldError(apiFieldErrors, 'alasan'),
+147:      });
+148:      setMessage({
+149:        type: 'error',
+150:        text: getApiErrorMessage(error, 'Pengajuan cuti gagal diproses.'),
+151:      });
+152:    } finally {
+153:      setIsSubmitting(false);
+154:    }
+155:  }
+156:
+157:  async function handleUpdateStatus(id, status) {
+158:    setIsSubmitting(true);
+159:
+160:    try {
+161:      await updateLeaveStatus(id, status);
+162:      setMessage({
+163:        type: 'success',
+164:        text:
+165:          status === 'Disetujui'
+166:            ? 'Pengajuan cuti berhasil disetujui.'
+167:            : 'Pengajuan cuti berhasil ditolak.',
+168:      });
+169:    } catch (error) {
+170:      setMessage({
+171:        type: 'error',
+172:        text: getApiErrorMessage(error, 'Status pengajuan cuti gagal diperbarui.'),
+173:      });
+174:    } finally {
+175:      setIsSubmitting(false);
+176:    }
+177:  }
+178:
+179:  return (
+180:    <PageDataShell title="cuti">
+181:      <Stack spacing={3}>
+182:      <Box
+183:        sx={{
+184:          px: { xs: 2.5, md: 3.5 },
+185:          py: { xs: 3, md: 3.5 },
+186:          borderRadius: 6,
+187:          background:
+188:            'linear-gradient(135deg, rgba(18, 32, 51, 1), rgba(25, 91, 193, 0.90) 54%, rgba(31, 157, 116, 0.72))',
+189:          color: '#ffffff',
+190:        }}
+191:      >
+192:        <Stack
+193:          direction={{ xs: 'column', lg: 'row' }}
+194:          justifyContent="space-between"
+195:          spacing={2}
+196:          alignItems={{ xs: 'flex-start', lg: 'center' }}
+197:        >
+198:          <Box>
+199:            <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: '0.14em' }}>
+200:              {role === 'admin_hr' ? 'Admin HR' : 'Karyawan'}
+201:            </Typography>
+202:            <Typography variant="h4" sx={{ mt: 0.5, mb: 1 }}>
+203:              Cuti
+204:            </Typography>
+205:            <Typography variant="body1" sx={{ maxWidth: 720, opacity: 0.9 }}>
+206:              {role === 'admin_hr'
+207:                ? 'Tinjau, setujui, atau tolak pengajuan cuti agar jadwal operasional tetap terkendali.'
+208:                : 'Ajukan cuti baru dan pantau status pengajuan Anda langsung dari panel ini.'}
+209:            </Typography>
+210:          </Box>
+211:          <Chip
+212:            icon={<CalendarMonthRoundedIcon />}
+213:            label="Alur cuti berbasis role"
+214:            sx={{
+215:              bgcolor: 'rgba(255,255,255,0.12)',
+216:              color: '#ffffff',
+217:              '& .MuiChip-icon': {
+218:                color: '#ffffff',
+219:              },
+220:            }}
+221:          />
+222:        </Stack>
+223:      </Box>
+224:
+225:      {message.text ? <Alert severity={message.type}>{message.text}</Alert> : null}
+226:
+227:      {role === 'admin_hr' ? (
+228:        <>
+229:          <Grid container spacing={2.5}>
+230:            <Grid size={{ xs: 12, md: 3 }}>
+231:              <Paper sx={{ p: 3 }}>
+232:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+233:                  <Box>
+234:                    <Typography variant="body2" color="text.secondary">
+235:                      Total Pengajuan
+236:                    </Typography>
+237:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+238:                      {adminSummary.total}
+239:                    </Typography>
+240:                  </Box>
+241:                  <Chip
+242:                    icon={<EventBusyRoundedIcon />}
+243:                    label="Semua"
+244:                    sx={{ bgcolor: '#eef3fb', color: 'text.secondary' }}
+245:                  />
+246:                </Stack>
+247:              </Paper>
+248:            </Grid>
+249:            <Grid size={{ xs: 12, md: 3 }}>
+250:              <Paper sx={{ p: 3 }}>
+251:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+252:                  <Box>
+253:                    <Typography variant="body2" color="text.secondary">
+254:                      Pending
+255:                    </Typography>
+256:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+257:                      {adminSummary.pending}
+258:                    </Typography>
+259:                  </Box>
+260:                  <Chip
+261:                    icon={<PendingActionsRoundedIcon />}
+262:                    label="Butuh keputusan"
+263:                    sx={{ bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }}
+264:                  />
+265:                </Stack>
+266:              </Paper>
+267:            </Grid>
+268:            <Grid size={{ xs: 12, md: 3 }}>
+269:              <Paper sx={{ p: 3 }}>
+270:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+271:                  <Box>
+272:                    <Typography variant="body2" color="text.secondary">
+273:                      Disetujui
+274:                    </Typography>
+275:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+276:                      {adminSummary.approved}
+277:                    </Typography>
+278:                  </Box>
+279:                  <Chip
+280:                    icon={<CheckCircleOutlineRoundedIcon />}
+281:                    label="Terkonfirmasi"
+282:                    sx={{ bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }}
+283:                  />
+284:                </Stack>
+285:              </Paper>
+286:            </Grid>
+287:            <Grid size={{ xs: 12, md: 3 }}>
+288:              <Paper sx={{ p: 3 }}>
+289:                <Stack direction="row" justifyContent="space-between" spacing={2}>
+290:                  <Box>
+291:                    <Typography variant="body2" color="text.secondary">
+292:                      Ditolak
+293:                    </Typography>
+294:                    <Typography variant="h5" sx={{ mt: 0.5 }}>
+295:                      {adminSummary.rejected}
+296:                    </Typography>
+297:                  </Box>
+298:                  <Chip
+299:                    icon={<ApprovalRoundedIcon />}
+300:                    label="Selesai ditinjau"
+301:                    sx={{ bgcolor: '#eef3fb', color: 'text.secondary' }}
+302:                  />
+303:                </Stack>
+304:              </Paper>
+305:            </Grid>
+306:          </Grid>
+307:
+308:          <Paper sx={{ p: 3 }}>
+309:            <Stack
+310:              direction={{ xs: 'column', xl: 'row' }}
+311:              justifyContent="space-between"
+312:              spacing={2}
+313:              sx={{ mb: 3 }}
+314:            >
+315:              <Box>
+316:                <Typography variant="h6">Daftar Pengajuan Cuti</Typography>
+317:                <Typography variant="body2" color="text.secondary">
+318:                  Tinjau pengajuan masuk dan ambil keputusan langsung dari tabel.
+319:                </Typography>
+320:              </Box>
+321:              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+322:                <TextField
+323:                  placeholder="Cari nama karyawan"
+324:                  value={keyword}
+325:                  onChange={(event) => setKeyword(event.target.value)}
+326:                  sx={{ minWidth: { xs: '100%', md: 260 } }}
+327:                  InputProps={{
+328:                    startAdornment: (
+329:                      <InputAdornment position="start">
+330:                        <SearchRoundedIcon color="action" />
+331:                      </InputAdornment>
+332:                    ),
+333:                  }}
+334:                />
+335:                <Select
+336:                  value={statusFilter}
+337:                  onChange={(event) => setStatusFilter(event.target.value)}
+338:                  sx={{ minWidth: { xs: '100%', md: 190 } }}
+339:                >
+340:                  <MenuItem value="Semua Status">Semua Status</MenuItem>
+341:                  <MenuItem value="Pending">Pending</MenuItem>
+342:                  <MenuItem value="Disetujui">Disetujui</MenuItem>
+343:                  <MenuItem value="Ditolak">Ditolak</MenuItem>
+344:                </Select>
+345:              </Stack>
+346:            </Stack>
+347:
+348:            <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: 1.5 }}>
+349:              {filteredAdminLeaves.map((leave) => (
+350:                <Paper key={leave.id} variant="outlined" sx={{ p: 2.25, borderRadius: 4 }}>
+351:                  <Stack spacing={1.5}>
+352:                    <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+353:                      <Box sx={{ minWidth: 0 }}>
+354:                        <Typography variant="subtitle1">{leave.nama}</Typography>
+355:                        <Typography variant="body2" color="text.secondary">
+356:                          {leave.departemen}
+357:                        </Typography>
+358:                      </Box>
+359:                      <Chip label={leave.status} size="small" sx={getStatusStyle(leave.status)} />
+360:                    </Stack>
+361:                    <Divider />
+362:                    <Box>
+363:                      <Typography variant="caption" color="text.secondary">
+364:                        Periode
+365:                      </Typography>
+366:                      <Typography variant="body2">
+367:                        {formatPeriod(leave.tanggalMulai, leave.tanggalSelesai)}
+368:                      </Typography>
+369:                    </Box>
+370:                    <Box>
+371:                      <Typography variant="caption" color="text.secondary">
+372:                        Alasan
+373:                      </Typography>
+374:                      <Typography variant="body2">{leave.alasan}</Typography>
+375:                    </Box>
+376:                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+377:                      <Button
+378:                        variant="contained"
+379:                        color="secondary"
+380:                        disabled={leave.status !== 'Pending' || isSubmitting}
+381:                        onClick={() => handleUpdateStatus(leave.id, 'Disetujui')}
+382:                        fullWidth
+383:                      >
+384:                        Approve
+385:                      </Button>
+386:                      <Button
+387:                        variant="outlined"
+388:                        color="error"
+389:                        disabled={leave.status !== 'Pending' || isSubmitting}
+390:                        onClick={() => handleUpdateStatus(leave.id, 'Ditolak')}
+391:                        fullWidth
+392:                      >
+393:                        Reject
+394:                      </Button>
+395:                    </Stack>
+396:                  </Stack>
+397:                </Paper>
+398:              ))}
+399:              {filteredAdminLeaves.length === 0 ? (
+400:                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 4 }}>
+401:                  <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+402:                    Tidak ada pengajuan yang cocok
+403:                  </Typography>
+404:                  <Typography variant="body2" color="text.secondary">
+405:                    Coba ubah kata kunci pencarian atau filter status.
+406:                  </Typography>
+407:                </Paper>
+408:              ) : null}
+409:            </Box>
+410:
+411:            <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+412:              <Table sx={{ minWidth: 920 }}>
+413:                <TableHead>
+414:                  <TableRow>
+415:                    <TableCell>Nama</TableCell>
+416:                    <TableCell>Departemen</TableCell>
+417:                    <TableCell>Periode</TableCell>
+418:                    <TableCell>Alasan</TableCell>
+419:                    <TableCell>Status</TableCell>
+420:                    <TableCell align="right">Aksi</TableCell>
+421:                  </TableRow>
+422:                </TableHead>
+423:                <TableBody>
+424:                  {filteredAdminLeaves.map((leave) => (
+425:                    <TableRow key={leave.id} hover>
+426:                      <TableCell>{leave.nama}</TableCell>
+427:                      <TableCell>{leave.departemen}</TableCell>
+428:                      <TableCell>{formatPeriod(leave.tanggalMulai, leave.tanggalSelesai)}</TableCell>
+429:                      <TableCell>{leave.alasan}</TableCell>
+430:                      <TableCell>
+431:                        <Chip label={leave.status} size="small" sx={getStatusStyle(leave.status)} />
+432:                      </TableCell>
+433:                      <TableCell align="right">
+434:                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+435:                          <Button
+436:                            variant="text"
+437:                            color="secondary"
+438:                            disabled={leave.status !== 'Pending'}
+439:                            loading={undefined}
+440:                            onClick={() => handleUpdateStatus(leave.id, 'Disetujui')}
+441:                          >
+442:                            Approve
+443:                          </Button>
+444:                          <Button
+445:                            variant="text"
+446:                            color="error"
+447:                            disabled={leave.status !== 'Pending'}
+448:                            onClick={() => handleUpdateStatus(leave.id, 'Ditolak')}
+449:                          >
+450:                            Reject
+451:                          </Button>
+452:                        </Stack>
+453:                      </TableCell>
+454:                    </TableRow>
+455:                  ))}
+456:                  {filteredAdminLeaves.length === 0 ? (
+457:                    <TableRow>
+458:                      <TableCell colSpan={6}>
+459:                        <Box sx={{ py: 6, textAlign: 'center' }}>
+460:                          <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+461:                            Tidak ada pengajuan yang cocok
+462:                          </Typography>
+463:                          <Typography variant="body2" color="text.secondary">
+464:                            Coba ubah kata kunci pencarian atau filter status.
+465:                          </Typography>
+466:                        </Box>
+467:                      </TableCell>
+468:                    </TableRow>
+469:                  ) : null}
+470:                </TableBody>
+471:              </Table>
+472:            </TableContainer>
+473:          </Paper>
+474:        </>
+475:      ) : (
+476:        <>
+477:          <Grid container spacing={2.5}>
+478:            <Grid size={{ xs: 12, lg: 5 }}>
+479:              <Paper sx={{ p: 3, height: '100%' }}>
+480:                <Stack spacing={2.5}>
+481:                  <Box>
+482:                    <Typography variant="h6">Ajukan Cuti Baru</Typography>
+483:                    <Typography variant="body2" color="text.secondary">
+484:                      Isi periode cuti dan alasan pengajuan. Status awal akan otomatis `Pending`.
+485:                    </Typography>
+486:                  </Box>
+487:                  <TextField
+488:                    label="Tanggal Mulai"
+489:                    type="date"
+490:                    value={form.tanggalMulai}
+491:                    onChange={(event) => handleFormChange('tanggalMulai', event.target.value)}
+492:                    InputLabelProps={{ shrink: true }}
+493:                    fullWidth
+494:                    error={Boolean(formErrors.tanggalMulai)}
+495:                    helperText={formErrors.tanggalMulai || ' '}
+496:                  />
+497:                  <TextField
+498:                    label="Tanggal Selesai"
+499:                    type="date"
+500:                    value={form.tanggalSelesai}
+501:                    onChange={(event) => handleFormChange('tanggalSelesai', event.target.value)}
+502:                    InputLabelProps={{ shrink: true }}
+503:                    fullWidth
+504:                    error={Boolean(formErrors.tanggalSelesai)}
+505:                    helperText={formErrors.tanggalSelesai || ' '}
+506:                  />
+507:                  <TextField
+508:                    label="Alasan"
+509:                    value={form.alasan}
+510:                    onChange={(event) => handleFormChange('alasan', event.target.value)}
+511:                    multiline
+512:                    minRows={4}
+513:                    fullWidth
+514:                    error={Boolean(formErrors.alasan)}
+515:                    helperText={formErrors.alasan || ' '}
+516:                  />
+517:                  <Button
+518:                    variant="contained"
+519:                    size="large"
+520:                    onClick={handleSubmitLeave}
+521:                    disabled={isSubmitting}
+522:                    fullWidth
+523:                  >
+524:                    {isSubmitting ? 'Memproses...' : 'Ajukan Cuti'}
+525:                  </Button>
+526:                </Stack>
+527:              </Paper>
+528:            </Grid>
+529:
+530:            <Grid size={{ xs: 12, lg: 7 }}>
+531:              <Grid container spacing={2.5}>
+532:                <Grid size={{ xs: 12, sm: 6 }}>
+533:                  <Paper sx={{ p: 3 }}>
+534:                    <Stack direction="row" justifyContent="space-between" spacing={2}>
+535:                      <Box>
+536:                        <Typography variant="body2" color="text.secondary">
+537:                          Pengajuan Pending
+538:                        </Typography>
+539:                        <Typography variant="h5" sx={{ mt: 0.5 }}>
+540:                          {employeeSummary.pending}
+541:                        </Typography>
+542:                      </Box>
+543:                      <Chip
+544:                        icon={<PendingActionsRoundedIcon />}
+545:                        label="Menunggu review"
+546:                        sx={{ bgcolor: 'rgba(237, 138, 24, 0.14)', color: '#c26a00' }}
+547:                      />
+548:                    </Stack>
+549:                  </Paper>
+550:                </Grid>
+551:                <Grid size={{ xs: 12, sm: 6 }}>
+552:                  <Paper sx={{ p: 3 }}>
+553:                    <Stack direction="row" justifyContent="space-between" spacing={2}>
+554:                      <Box>
+555:                        <Typography variant="body2" color="text.secondary">
+556:                          Pengajuan Disetujui
+557:                        </Typography>
+558:                        <Typography variant="h5" sx={{ mt: 0.5 }}>
+559:                          {employeeSummary.approved}
+560:                        </Typography>
+561:                      </Box>
+562:                      <Chip
+563:                        icon={<CheckCircleOutlineRoundedIcon />}
+564:                        label="Siap digunakan"
+565:                        sx={{ bgcolor: 'rgba(31, 157, 116, 0.12)', color: 'secondary.main' }}
+566:                      />
+567:                    </Stack>
+568:                  </Paper>
+569:                </Grid>
+570:                <Grid size={{ xs: 12 }}>
+571:                  <Paper sx={{ p: 3 }}>
+572:                    <Typography variant="h6" sx={{ mb: 0.5 }}>
+573:                      Riwayat Pengajuan Cuti
+574:                    </Typography>
+575:                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+576:                      Pantau hasil pengajuan cuti terbaru tanpa berpindah halaman.
+577:                    </Typography>
+578:                    <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: 1.5 }}>
+579:                      {employeeLeaves.map((leave) => (
+580:                        <Paper key={leave.id} variant="outlined" sx={{ p: 2.25, borderRadius: 4 }}>
+581:                          <Stack spacing={1.25}>
+582:                            <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+583:                              <Typography variant="subtitle2">
+584:                                {formatPeriod(leave.tanggalMulai, leave.tanggalSelesai)}
+585:                              </Typography>
+586:                              <Chip label={leave.status} size="small" sx={getStatusStyle(leave.status)} />
+587:                            </Stack>
+588:                            <Typography variant="body2" color="text.secondary">
+589:                              {leave.alasan}
+590:                            </Typography>
+591:                          </Stack>
+592:                        </Paper>
+593:                      ))}
+594:                    </Box>
+595:
+596:                    <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+597:                      <Table sx={{ minWidth: 640 }}>
+598:                        <TableHead>
+599:                          <TableRow>
+600:                            <TableCell>Periode</TableCell>
+601:                            <TableCell>Alasan</TableCell>
+602:                            <TableCell>Status</TableCell>
+603:                          </TableRow>
+604:                        </TableHead>
+605:                        <TableBody>
+606:                          {employeeLeaves.map((leave) => (
+607:                            <TableRow key={leave.id} hover>
+608:                              <TableCell>
+609:                                {formatPeriod(leave.tanggalMulai, leave.tanggalSelesai)}
+610:                              </TableCell>
+611:                              <TableCell>{leave.alasan}</TableCell>
+612:                              <TableCell>
+613:                                <Chip label={leave.status} size="small" sx={getStatusStyle(leave.status)} />
+614:                              </TableCell>
+615:                            </TableRow>
+616:                          ))}
+617:                        </TableBody>
+618:                      </Table>
+619:                    </TableContainer>
+620:                  </Paper>
+621:                </Grid>
+622:              </Grid>
+623:            </Grid>
+624:          </Grid>
+625:        </>
+626:      )}
+627:      </Stack>
+628:    </PageDataShell>
+629:  );
+630:}

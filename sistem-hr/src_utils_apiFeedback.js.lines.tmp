@@ -1,0 +1,40 @@
+1:export function getApiFieldErrors(error) {
+2:  const payload = error?.payload;
+3:
+4:  if (payload && typeof payload === 'object' && payload.errors && typeof payload.errors === 'object') {
+5:    return payload.errors;
+6:  }
+7:
+8:  return {};
+9:}
+10:
+11:export function getFieldError(fieldErrors, ...keys) {
+12:  for (const key of keys) {
+13:    const value = fieldErrors?.[key];
+14:
+15:    if (Array.isArray(value) && value.length > 0) {
+16:      return value[0];
+17:    }
+18:
+19:    if (typeof value === 'string' && value) {
+20:      return value;
+21:    }
+22:  }
+23:
+24:  return '';
+25:}
+26:
+27:export function getApiErrorMessage(error, fallbackMessage) {
+28:  const fieldErrors = getApiFieldErrors(error);
+29:  const firstFieldError = Object.values(fieldErrors)[0];
+30:
+31:  if (Array.isArray(firstFieldError) && firstFieldError[0]) {
+32:    return firstFieldError[0];
+33:  }
+34:
+35:  if (typeof firstFieldError === 'string' && firstFieldError) {
+36:    return firstFieldError;
+37:  }
+38:
+39:  return error?.message || fallbackMessage;
+40:}

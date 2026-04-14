@@ -1,0 +1,12 @@
+1:export class ApiError extends Error {
+2:  constructor(message, options = {}) {
+3:    super(message);
+4:    this.name = 'ApiError';
+5:    this.status = options.status ?? 500;
+6:    this.payload = options.payload;
+7:    this.errors =
+8:      options.payload && typeof options.payload === 'object' && options.payload.errors
+9:        ? options.payload.errors
+10:        : {};
+11:  }
+12:}

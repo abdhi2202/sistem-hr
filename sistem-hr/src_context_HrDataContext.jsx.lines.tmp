@@ -1,0 +1,155 @@
+1:import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+2:import { useRole } from './RoleContext';
+3:import { hrService, hrServiceMode } from '../services/hrService';
+4:import { buildInitialHrData } from '../services/hrDataStorage';
+5:
+6:const HrDataContext = createContext(null);
+7:
+8:export function HrDataProvider({ children }) {
+9:  const { isAuthenticated, token, role } = useRole();
+10:  const [data, setData] = useState(buildInitialHrData);
+11:  const [isHydrated, setIsHydrated] = useState(false);
+12:  const [hydrationError, setHydrationError] = useState('');
+13:
+14:  useEffect(() => {
+15:    let active = true;
+16:
+17:    async function hydrate() {
+18:      if (hrServiceMode === 'http' && !isAuthenticated) {
+19:        if (active) {
+20:          setData(buildInitialHrData());
+21:          setIsHydrated(true);
+22:          setHydrationError('');
+23:        }
+24:        return;
+25:      }
+26:
+27:      try {
+28:          const snapshot = await hrService.dashboard.getSnapshot(role);
+29:
+30:        if (active) {
+31:          setData(snapshot);
+32:          setIsHydrated(true);
+33:          setHydrationError('');
+34:        }
+35:      } catch (error) {
+36:        if (active) {
+37:          setData(buildInitialHrData());
+38:          setIsHydrated(true);
+39:          setHydrationError(error.message || 'Gagal memuat data HR.');
+40:        }
+41:      }
+42:    }
+43:
+44:    hydrate();
+45:
+46:    return () => {
+47:      active = false;
+48:    };
+49:  }, [isAuthenticated, role, token]);
+50:
+51:  async function refreshSnapshot() {
+52:    const snapshot = await hrService.dashboard.getSnapshot(role);
+53:    setData(snapshot);
+54:    setHydrationError('');
+55:    return snapshot;
+56:  }
+57:
+58:  async function addEmployee(form) {
+59:    await hrService.employees.create(form);
+60:    return refreshSnapshot();
+61:  }
+62:
+63:  async function updateEmployee(id, updates) {
+64:    await hrService.employees.update(id, updates);
+65:    return refreshSnapshot();
+66:  }
+67:
+68:  async function deleteEmployee(id) {
+69:    await hrService.employees.remove(id);
+70:    return refreshSnapshot();
+71:  }
+72:
+73:  async function saveDepartment(item) {
+74:    await hrService.master.saveDepartment(item);
+75:    return refreshSnapshot();
+76:  }
+77:
+78:  async function deleteDepartment(id) {
+79:    await hrService.master.deleteDepartment(id);
+80:    return refreshSnapshot();
+81:  }
+82:
+83:  async function savePosition(item) {
+84:    await hrService.master.savePosition(item);
+85:    return refreshSnapshot();
+86:  }
+87:
+88:  async function deletePosition(id) {
+89:    await hrService.master.deletePosition(id);
+90:    return refreshSnapshot();
+91:  }
+92:
+93:  async function clockIn() {
+94:    const result = await hrService.attendance.clockIn();
+95:    await refreshSnapshot();
+96:    return result;
+97:  }
+98:
+99:  async function clockOut() {
+100:    const result = await hrService.attendance.clockOut();
+101:    await refreshSnapshot();
+102:    return result;
+103:  }
+104:
+105:  async function createLeaveRequest(form) {
+106:    await hrService.leaves.createEmployeeRequest(form);
+107:    return refreshSnapshot();
+108:  }
+109:
+110:  async function updateLeaveStatus(id, status) {
+111:    await hrService.leaves.updateAdminRequestStatus(id, status);
+112:    return refreshSnapshot();
+113:  }
+114:
+115:  async function resetHrData() {
+116:    const resetData = await hrService.system.reset();
+117:    setData(resetData);
+118:    return resetData;
+119:  }
+120:
+121:  const value = useMemo(
+122:    () => ({
+123:      ...data,
+124:      isHydrated,
+125:      hydrationError,
+126:      dataSourceMode: hrServiceMode,
+127:      refreshSnapshot,
+128:      addEmployee,
+129:      updateEmployee,
+130:      deleteEmployee,
+131:      saveDepartment,
+132:      deleteDepartment,
+133:      savePosition,
+134:      deletePosition,
+135:      clockIn,
+136:      clockOut,
+137:      createLeaveRequest,
+138:      updateLeaveStatus,
+139:      resetHrData,
+140:    }),
+141:    [data, hydrationError, isHydrated],
+142:  );
+143:
+144:  return <HrDataContext.Provider value={value}>{children}</HrDataContext.Provider>;
+145:}
+146:
+147:export function useHrData() {
+148:  const context = useContext(HrDataContext);
+149:
+150:  if (!context) {
+151:    throw new Error('useHrData harus digunakan di dalam HrDataProvider.');
+152:  }
+153:
+154:  return context;
+155:}

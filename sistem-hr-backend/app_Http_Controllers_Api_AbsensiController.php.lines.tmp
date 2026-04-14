@@ -1,0 +1,126 @@
+1:<?php
+2:
+3:namespace App\Http\Controllers\Api;
+4:
+5:use App\Http\Controllers\Controller;
+6:use App\Http\Resources\Api\AbsensiResource;
+7:use App\Models\Absensi;
+8:use App\Models\Karyawan;
+9:use Illuminate\Http\JsonResponse;
+10:use Symfony\Component\HttpFoundation\StreamedResponse;
+11:
+12:class AbsensiController extends Controller
+13:{
+14:    public function index(): JsonResponse
+15:    {
+16:        $scope = request('scope', 'me');
+17:        $user = request()->user();
+18:
+19:        $query = Absensi::query()->with('karyawan.departemen');
+20:
+21:        if ($scope !== 'admin' || $user?->role !== 'admin_hr') {
+22:            $query->where('karyawan_id', $user?->karyawan?->id);
+23:        }
+24:
+25:        return response()->json([
+26:            'data' => AbsensiResource::collection($query->latest('tanggal')->get()),
+27:        ]);
+28:    }
+29:
+30:    public function clockIn(): JsonResponse
+31:    {
+32:        $karyawan = $this->resolveEmployee();
+33:        $today = now()->toDateString();
+34:
+35:        $absensi = Absensi::query()
+36:            ->where('karyawan_id', $karyawan->id)
+37:            ->whereDate('tanggal', $today)
+38:            ->first();
+39:
+40:        if (! $absensi) {
+41:            $absensi = Absensi::query()->create([
+42:                'karyawan_id' => $karyawan->id,
+43:                'tanggal' => $today,
+44:                'waktu_masuk' => now()->format('H:i'),
+45:                'status' => 'Hadir',
+46:            ]);
+47:        }
+48:
+49:        if (! $absensi->waktu_masuk) {
+50:            $absensi->update(['waktu_masuk' => now()->format('H:i')]);
+51:        }
+52:
+53:        $absensi->load('karyawan.departemen');
+54:
+55:        return response()->json([
+56:            'data' => new AbsensiResource($absensi),
+57:            'message' => 'Clock-in berhasil dicatat.',
+58:        ]);
+59:    }
+60:
+61:    public function clockOut(): JsonResponse
+62:    {
+63:        $karyawan = $this->resolveEmployee();
+64:        $today = now()->toDateString();
+65:
+66:        $absensi = Absensi::query()
+67:            ->where('karyawan_id', $karyawan->id)
+68:            ->whereDate('tanggal', $today)
+69:            ->first();
+70:
+71:        if (! $absensi) {
+72:            $absensi = Absensi::query()->create([
+73:                'karyawan_id' => $karyawan->id,
+74:                'tanggal' => $today,
+75:                'status' => 'Hadir',
+76:            ]);
+77:        }
+78:
+79:        $absensi->update([
+80:            'waktu_keluar' => now()->format('H:i'),
+81:        ]);
+82:
+83:        $absensi->load('karyawan.departemen');
+84:
+85:        return response()->json([
+86:            'data' => new AbsensiResource($absensi),
+87:            'message' => 'Clock-out berhasil dicatat.',
+88:        ]);
+89:    }
+90:
+91:    public function exportCsv(): StreamedResponse
+92:    {
+93:        $rows = Absensi::query()
+94:            ->with('karyawan.departemen')
+95:            ->latest('tanggal')
+96:            ->get();
+97:
+98:        return response()->streamDownload(function () use ($rows) {
+99:            $handle = fopen('php://output', 'w');
+100:            fputcsv($handle, ['Tanggal', 'Nama', 'Departemen', 'Waktu Masuk', 'Waktu Keluar', 'Status']);
+101:
+102:            foreach ($rows as $row) {
+103:                fputcsv($handle, [
+104:                    optional($row->tanggal)->format('Y-m-d'),
+105:                    $row->karyawan?->nama_lengkap,
+106:                    $row->karyawan?->departemen?->nama_departemen,
+107:                    $row->waktu_masuk,
+108:                    $row->waktu_keluar,
+109:                    $row->status,
+110:                ]);
+111:            }
+112:
+113:            fclose($handle);
+114:        }, 'absensi.csv', ['Content-Type' => 'text/csv']);
+115:    }
+116:
+117:    protected function resolveEmployee(): Karyawan
+118:    {
+119:        /** @var Karyawan $employee */
+120:        $employee = request()->user()->karyawan;
+121:
+122:        abort_if(! $employee, 404, 'Data karyawan tidak ditemukan.');
+123:
+124:        return $employee;
+125:    }
+126:}

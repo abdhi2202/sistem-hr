@@ -1,0 +1,323 @@
+1:import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+2:import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded';
+3:import {
+4:  Alert,
+5:  Box,
+6:  Button,
+7:  Chip,
+8:  Container,
+9:  FormControl,
+10:  InputLabel,
+11:  MenuItem,
+12:  Paper,
+13:  Select,
+14:  Stack,
+15:  TextField,
+16:  Typography,
+17:} from '@mui/material';
+18:import { useMemo, useState } from 'react';
+19:import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+20:import { useRole } from '../context/RoleContext';
+21:import { demoAccounts } from '../services/mockAuthApi';
+22:import { getApiErrorMessage, getApiFieldErrors, getFieldError } from '../utils/apiFeedback';
+23:
+24:export default function LoginPage() {
+25:  const navigate = useNavigate();
+26:  const location = useLocation();
+27:  const { isAuthenticated, login, authMode, authNotice, clearAuthNotice } = useRole();
+28:  const [form, setForm] = useState({
+29:    email: demoAccounts.admin_hr.email,
+30:    password: demoAccounts.admin_hr.password,
+31:    role: 'admin_hr',
+32:  });
+33:  const [error, setError] = useState('');
+34:  const [fieldErrors, setFieldErrors] = useState({});
+35:  const [isSubmitting, setIsSubmitting] = useState(false);
+36:
+37:  const nextPath = useMemo(() => location.state?.from?.pathname ?? '/dashboard', [location.state]);
+38:
+39:  if (isAuthenticated) {
+40:    return <Navigate to={nextPath} replace />;
+41:  }
+42:
+43:  function applyDemo(role) {
+44:    setForm({
+45:      email: demoAccounts[role].email,
+46:      password: demoAccounts[role].password,
+47:      role,
+48:    });
+49:    setError('');
+50:    setFieldErrors({});
+51:  }
+52:
+53:  function handleChange(field, value) {
+54:    setForm((current) => ({
+55:      ...current,
+56:      [field]: value,
+57:    }));
+58:    setFieldErrors((current) => ({
+59:      ...current,
+60:      [field]: undefined,
+61:    }));
+62:  }
+63:
+64:  async function handleSubmit(event) {
+65:    event.preventDefault();
+66:    const nextFieldErrors = {};
+67:
+68:    if (!form.email || !form.password) {
+69:      if (!form.email) {
+70:        nextFieldErrors.email = ['Email wajib diisi.'];
+71:      }
+72:      if (!form.password) {
+73:        nextFieldErrors.password = ['Password wajib diisi.'];
+74:      }
+75:      setFieldErrors(nextFieldErrors);
+76:      setError('Email dan password wajib diisi.');
+77:      return;
+78:    }
+79:
+80:    if (form.password.length < 6) {
+81:      setFieldErrors({
+82:        password: ['Password minimal 6 karakter.'],
+83:      });
+84:      setError('Password minimal 6 karakter.');
+85:      return;
+86:    }
+87:
+88:    setError('');
+89:    setFieldErrors({});
+90:    setIsSubmitting(true);
+91:
+92:    try {
+93:      await login({
+94:        role: form.role,
+95:        email: form.email,
+96:        password: form.password,
+97:      });
+98:      navigate(nextPath, { replace: true });
+99:    } catch (loginError) {
+100:      setFieldErrors(getApiFieldErrors(loginError));
+101:      setError(getApiErrorMessage(loginError, 'Login gagal diproses.'));
+102:    } finally {
+103:      setIsSubmitting(false);
+104:    }
+105:  }
+106:
+107:  return (
+108:    <Box
+109:      sx={{
+110:        minHeight: '100vh',
+111:        display: 'flex',
+112:        alignItems: 'center',
+113:        background:
+114:          'radial-gradient(circle at top left, rgba(31, 94, 255, 0.18), transparent 35%), linear-gradient(180deg, #eef3fb 0%, #f7f9fd 100%)',
+115:      }}
+116:    >
+117:      <Container maxWidth="lg">
+118:        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="stretch">
+119:          <Paper
+120:            sx={{
+121:              flex: 1.05,
+122:              p: { xs: 3, md: 4 },
+123:              color: '#ffffff',
+124:              background:
+125:                'linear-gradient(145deg, rgba(15, 28, 47, 1), rgba(31, 94, 255, 0.92) 62%, rgba(31, 157, 116, 0.82))',
+126:              position: 'relative',
+127:              overflow: 'hidden',
+128:            }}
+129:          >
+130:            <Box
+131:              sx={{
+132:                position: 'absolute',
+133:                right: -40,
+134:                top: -30,
+135:                width: 180,
+136:                height: 180,
+137:                borderRadius: '50%',
+138:                bgcolor: 'rgba(255,255,255,0.08)',
+139:              }}
+140:            />
+141:            <Stack spacing={3} sx={{ position: 'relative' }}>
+142:              <Chip
+143:                icon={<BadgeOutlinedIcon />}
+144:                label="Sistem HR Perusahaan"
+145:                sx={{
+146:                  alignSelf: 'flex-start',
+147:                  bgcolor: 'rgba(255,255,255,0.12)',
+148:                  color: '#ffffff',
+149:                }}
+150:              />
+151:              <Box>
+152:                <Typography variant="h3" sx={{ mb: 1.5 }}>
+153:                  Selamat datang kembali
+154:                </Typography>
+155:                <Typography variant="body1" sx={{ maxWidth: 520, opacity: 0.88 }}>
+156:                  Masuk ke panel HR untuk memantau operasional, absensi, dan pengajuan cuti
+157:                  dengan tampilan yang cepat dan terstruktur.
+158:                </Typography>
+159:              </Box>
+160:              <Stack spacing={2}>
+161:                <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.12)', color: '#ffffff' }}>
+162:                  <Typography variant="subtitle1" sx={{ mb: 0.75 }}>
+163:                    Yang sudah siap di demo ini
+164:                  </Typography>
+165:                  <Typography variant="body2" sx={{ opacity: 0.84 }}>
+166:                    {authMode === 'mock'
+167:                      ? 'Login mock dua role, dashboard hybrid, sidebar responsif, dan komponen dashboard berbasis Material UI Paper.'
+168:                      : 'Frontend siap mengirim login ke backend Laravel, menyimpan token sesi, dan memakai mode data API.'}
+169:                  </Typography>
+170:                </Paper>
+171:                {authMode === 'mock' ? (
+172:                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+173:                    <Chip
+174:                      label="Admin HR: monitoring penuh"
+175:                      sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#ffffff' }}
+176:                    />
+177:                    <Chip
+178:                      label="Karyawan: fokus absensi & cuti"
+179:                      sx={{ bgcolor: 'rgba(255,255,255,0.14)', color: '#ffffff' }}
+180:                    />
+181:                  </Stack>
+182:                ) : (
+183:                  <Chip
+184:                    label="Mode API aktif"
+185:                    sx={{ alignSelf: 'flex-start', bgcolor: 'rgba(255,255,255,0.14)', color: '#ffffff' }}
+186:                  />
+187:                )}
+188:              </Stack>
+189:            </Stack>
+190:          </Paper>
+191:
+192:          <Paper sx={{ flex: 0.95, p: { xs: 3, md: 4 } }}>
+193:            <Stack spacing={3} component="form" onSubmit={handleSubmit}>
+194:              <Box>
+195:                <Typography variant="h4" sx={{ mb: 1 }}>
+196:                  Masuk
+197:                </Typography>
+198:                <Typography variant="body2" color="text.secondary">
+199:                  {authMode === 'mock'
+200:                    ? 'Gunakan akun demo untuk melihat desain dashboard sesuai role.'
+201:                    : 'Masukkan kredensial backend untuk memulai sesi dan memuat data dari API.'}
+202:                </Typography>
+203:              </Box>
+204:
+205:              {authNotice ? (
+206:                <Alert severity="warning" onClose={clearAuthNotice}>
+207:                  {authNotice}
+208:                </Alert>
+209:              ) : null}
+210:              {error ? <Alert severity="error">{error}</Alert> : null}
+211:
+212:              {authMode === 'mock' ? (
+213:                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+214:                  <Button
+215:                    variant={form.role === 'admin_hr' ? 'contained' : 'outlined'}
+216:                    onClick={() => applyDemo('admin_hr')}
+217:                  >
+218:                    {demoAccounts.admin_hr.label}
+219:                  </Button>
+220:                  <Button
+221:                    variant={form.role === 'karyawan' ? 'contained' : 'outlined'}
+222:                    onClick={() => applyDemo('karyawan')}
+223:                  >
+224:                    {demoAccounts.karyawan.label}
+225:                  </Button>
+226:                </Stack>
+227:              ) : null}
+228:
+229:              <TextField
+230:                label="Email"
+231:                type="email"
+232:                value={form.email}
+233:                onChange={(event) => handleChange('email', event.target.value)}
+234:                fullWidth
+235:                error={Boolean(getFieldError(fieldErrors, 'email'))}
+236:                helperText={getFieldError(fieldErrors, 'email') || ' '}
+237:              />
+238:
+239:              <TextField
+240:                label="Password"
+241:                type="password"
+242:                value={form.password}
+243:                onChange={(event) => handleChange('password', event.target.value)}
+244:                fullWidth
+245:                error={Boolean(getFieldError(fieldErrors, 'password'))}
+246:                helperText={getFieldError(fieldErrors, 'password') || ' '}
+247:              />
+248:
+249:              {authMode === 'mock' ? (
+250:                <>
+251:                  <FormControl fullWidth>
+252:                    <InputLabel id="login-role-label">Masuk sebagai</InputLabel>
+253:                    <Select
+254:                      labelId="login-role-label"
+255:                      label="Masuk sebagai"
+256:                      value={form.role}
+257:                      onChange={(event) => applyDemo(event.target.value)}
+258:                    >
+259:                      <MenuItem value="admin_hr">Admin HR</MenuItem>
+260:                      <MenuItem value="karyawan">Karyawan</MenuItem>
+261:                    </Select>
+262:                  </FormControl>
+263:
+264:                  <Paper
+265:                    variant="outlined"
+266:                    sx={{
+267:                      p: 2,
+268:                      borderRadius: 4,
+269:                      bgcolor: '#f7f9fd',
+270:                      borderColor: 'divider',
+271:                    }}
+272:                  >
+273:                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+274:                      Kredensial demo
+275:                    </Typography>
+276:                    <Typography variant="body2" color="text.secondary">
+277:                      Email akan terisi otomatis sesuai role. Password demo: `password123`
+278:                    </Typography>
+279:                  </Paper>
+280:                </>
+281:              ) : (
+282:                <Paper
+283:                  variant="outlined"
+284:                  sx={{
+285:                    p: 2,
+286:                    borderRadius: 4,
+287:                    bgcolor: '#f7f9fd',
+288:                    borderColor: 'divider',
+289:                  }}
+290:                >
+291:                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+292:                    Kredensial backend demo
+293:                  </Typography>
+294:                  <Stack spacing={0.75}>
+295:                    <Typography variant="body2" color="text.secondary">
+296:                      Admin HR: `admin@ssms.test` / `password`
+297:                    </Typography>
+298:                    <Typography variant="body2" color="text.secondary">
+299:                      Karyawan: `rina.paramita@ssms.test` / `password`
+300:                    </Typography>
+301:                    <Typography variant="body2" color="text.secondary">
+302:                      Role akan mengikuti hasil autentikasi backend.
+303:                    </Typography>
+304:                  </Stack>
+305:                </Paper>
+306:              )}
+307:
+308:              <Button
+309:                type="submit"
+310:                variant="contained"
+311:                size="large"
+312:                startIcon={<LockOpenRoundedIcon />}
+313:                disabled={isSubmitting}
+314:              >
+315:                Masuk ke Dashboard
+316:              </Button>
+317:            </Stack>
+318:          </Paper>
+319:        </Stack>
+320:      </Container>
+321:    </Box>
+322:  );
+323:}

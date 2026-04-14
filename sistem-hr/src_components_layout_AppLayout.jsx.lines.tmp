@@ -1,0 +1,320 @@
+1:import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
+2:import {
+3:  Alert,
+4:  AppBar,
+5:  Box,
+6:  Button,
+7:  Collapse,
+8:  Divider,
+9:  Drawer,
+10:  FormControl,
+11:  IconButton,
+12:  InputLabel,
+13:  List,
+14:  ListItemButton,
+15:  ListItemText,
+16:  MenuItem,
+17:  Select,
+18:  Stack,
+19:  Toolbar,
+20:  Typography,
+21:  useMediaQuery,
+22:  useTheme,
+23:} from '@mui/material';
+24:import { useEffect, useState } from 'react';
+25:import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+26:import { menuByRole } from '../../data/dashboardData';
+27:import { useHrData } from '../../context/HrDataContext';
+28:import { useRole } from '../../context/RoleContext';
+29:import { subscribeForbiddenEvent } from '../../services/api/events';
+30:import { getRoleLabel } from '../../utils/dashboardContent';
+31:
+32:const drawerWidth = 280;
+33:const pageMeta = {
+34:  '/dashboard': {
+35:    eyebrow: 'Dashboard',
+36:    title: 'Ringkasan Sistem HR',
+37:  },
+38:  '/karyawan': {
+39:    eyebrow: 'Karyawan',
+40:    title: 'Manajemen Data Karyawan',
+41:  },
+42:  '/master': {
+43:    eyebrow: 'Master Data',
+44:    title: 'Referensi Jabatan & Departemen',
+45:  },
+46:  '/absensi': {
+47:    eyebrow: 'Absensi',
+48:    title: 'Pemantauan Kehadiran',
+49:  },
+50:  '/cuti': {
+51:    eyebrow: 'Cuti',
+52:    title: 'Pengajuan dan Persetujuan Cuti',
+53:  },
+54:  '/profil': {
+55:    eyebrow: 'Profil',
+56:    title: 'Informasi Pengguna',
+57:  },
+58:};
+59:
+60:function SidebarContent({ currentPath, onNavigate }) {
+61:  const { role } = useRole();
+62:  const menuItems = menuByRole[role];
+63:
+64:  return (
+65:    <Box
+66:      sx={{
+67:        display: 'flex',
+68:        flexDirection: 'column',
+69:        height: '100%',
+70:        px: 2,
+71:        py: 3,
+72:        bgcolor: '#0f1c2f',
+73:        color: '#f5f8ff',
+74:      }}
+75:    >
+76:      <Typography variant="overline" sx={{ opacity: 0.72, letterSpacing: '0.12em' }}>
+77:        Sistem HR
+78:      </Typography>
+79:      <Typography variant="h5" sx={{ mb: 3 }}>
+80:        Panel Kerja
+81:      </Typography>
+82:      <List sx={{ display: 'grid', gap: 1 }}>
+83:        {menuItems.map((item) => {
+84:          const isActive = currentPath === item.path;
+85:          return (
+86:            <ListItemButton
+87:              key={item.label}
+88:              component={NavLink}
+89:              to={item.path}
+90:              onClick={onNavigate}
+91:              sx={{
+92:                borderRadius: 3,
+93:                bgcolor: isActive ? 'rgba(255,255,255,0.10)' : 'transparent',
+94:                '&:hover': {
+95:                  bgcolor: 'rgba(255,255,255,0.08)',
+96:                },
+97:              }}
+98:            >
+99:              <ListItemText
+100:                primary={item.label}
+101:                primaryTypographyProps={{
+102:                  fontWeight: isActive ? 700 : 500,
+103:                }}
+104:              />
+105:            </ListItemButton>
+106:          );
+107:        })}
+108:      </List>
+109:      <Box sx={{ mt: 'auto', pt: 3 }}>
+110:        <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', mb: 2 }} />
+111:        <Typography variant="body2" sx={{ opacity: 0.72 }}>
+112:          Tampilan ini menggunakan data mock untuk simulasi dashboard tahap awal.
+113:        </Typography>
+114:      </Box>
+115:    </Box>
+116:  );
+117:}
+118:
+119:export default function AppLayout() {
+120:  const [mobileOpen, setMobileOpen] = useState(false);
+121:  const [isLoggingOut, setIsLoggingOut] = useState(false);
+122:  const theme = useTheme();
+123:  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+124:  const location = useLocation();
+125:  const navigate = useNavigate();
+126:  const { dataSourceMode, hydrationError, refreshSnapshot } = useHrData();
+127:  const { role, setRole, logout, name, canPreviewRole } = useRole();
+128:  const currentPage = pageMeta[location.pathname] ?? pageMeta['/dashboard'];
+129:
+130:  useEffect(() => {
+131:    return subscribeForbiddenEvent(() => {
+132:      if (dataSourceMode === 'http') {
+133:        navigate('/403', { replace: true });
+134:      }
+135:    });
+136:  }, [dataSourceMode, navigate]);
+137:
+138:  async function handleLogout() {
+139:    setIsLoggingOut(true);
+140:    await logout();
+141:    setIsLoggingOut(false);
+142:    navigate('/login', { replace: true });
+143:  }
+144:
+145:  const drawer = (
+146:    <SidebarContent currentPath={location.pathname} onNavigate={() => setMobileOpen(false)} />
+147:  );
+148:
+149:  return (
+150:    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+151:      {isDesktop ? (
+152:        <Drawer
+153:          variant="permanent"
+154:          open
+155:          PaperProps={{
+156:            sx: {
+157:              width: drawerWidth,
+158:              border: 'none',
+159:              boxShadow: 'none',
+160:            },
+161:          }}
+162:        >
+163:          {drawer}
+164:        </Drawer>
+165:      ) : (
+166:        <Drawer
+167:          variant="temporary"
+168:          open={mobileOpen}
+169:          onClose={() => setMobileOpen(false)}
+170:          ModalProps={{ keepMounted: true }}
+171:          PaperProps={{
+172:            sx: {
+173:              width: drawerWidth,
+174:              border: 'none',
+175:            },
+176:          }}
+177:        >
+178:          {drawer}
+179:        </Drawer>
+180:      )}
+181:
+182:      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+183:        <AppBar
+184:          position="sticky"
+185:          color="transparent"
+186:          elevation={0}
+187:          sx={{
+188:            backdropFilter: 'blur(12px)',
+189:            bgcolor: 'rgba(244, 247, 251, 0.86)',
+190:            borderBottom: '1px solid',
+191:            borderColor: 'divider',
+192:          }}
+193:        >
+194:          <Toolbar
+195:            sx={{
+196:              gap: 2,
+197:              minHeight: { xs: 'auto', md: 88 },
+198:              py: { xs: 1.5, md: 0 },
+199:              alignItems: { xs: 'stretch', md: 'center' },
+200:              flexDirection: { xs: 'column', md: 'row' },
+201:            }}
+202:          >
+203:            {!isDesktop && (
+204:              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+205:                <IconButton onClick={() => setMobileOpen(true)} edge="start" color="primary">
+206:                  <MenuRoundedIcon />
+207:                </IconButton>
+208:                <Typography variant="subtitle2" color="text.secondary">
+209:                  {currentPage.eyebrow}
+210:                </Typography>
+211:              </Stack>
+212:            )}
+213:            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+214:              <Typography
+215:                variant="body2"
+216:                color="text.secondary"
+217:                sx={{ mb: 0.5, display: { xs: isDesktop ? 'block' : 'none', md: 'block' } }}
+218:              >
+219:                {currentPage.eyebrow}
+220:              </Typography>
+221:              <Typography variant="h6" sx={{ lineHeight: 1.25 }}>
+222:                {currentPage.title}
+223:              </Typography>
+224:            </Box>
+225:            <Stack
+226:              direction={{ xs: 'column', xl: 'row' }}
+227:              spacing={1.25}
+228:              alignItems="stretch"
+229:              sx={{ width: { xs: '100%', md: 'auto' } }}
+230:            >
+231:              <Box
+232:                sx={{
+233:                  px: 2,
+234:                  py: 1.25,
+235:                  borderRadius: 3,
+236:                  bgcolor: 'background.paper',
+237:                  border: '1px solid',
+238:                  borderColor: 'divider',
+239:                  minWidth: { xs: '100%', xl: 190 },
+240:                }}
+241:              >
+242:                <Stack
+243:                  direction={{ xs: 'row', sm: 'column' }}
+244:                  spacing={{ xs: 2, sm: 0.25 }}
+245:                  justifyContent="space-between"
+246:                >
+247:                  <Box>
+248:                    <Typography variant="caption" color="text.secondary">
+249:                      Role aktif
+250:                    </Typography>
+251:                    <Typography variant="subtitle2">{getRoleLabel(role)}</Typography>
+252:                  </Box>
+253:                  <Box sx={{ textAlign: { xs: 'right', sm: 'left' } }}>
+254:                    <Typography variant="caption" color="text.secondary" display="block">
+255:                      {name || 'Pengguna demo'}
+256:                    </Typography>
+257:                    <Typography variant="caption" color="text.secondary" display="block">
+258:                      Mode data: {dataSourceMode === 'http' ? 'API' : 'Mock'}
+259:                    </Typography>
+260:                  </Box>
+261:                </Stack>
+262:              </Box>
+263:              <FormControl size="small" sx={{ minWidth: { xs: '100%', xl: 190 } }}>
+264:                <InputLabel id="role-select-label">Mode Preview</InputLabel>
+265:                <Select
+266:                  labelId="role-select-label"
+267:                  value={role}
+268:                  label="Mode Preview"
+269:                  disabled={!canPreviewRole}
+270:                  onChange={(event) => setRole(event.target.value)}
+271:                >
+272:                  <MenuItem value="admin_hr">Admin HR</MenuItem>
+273:                  <MenuItem value="karyawan">Karyawan</MenuItem>
+274:                </Select>
+275:              </FormControl>
+276:              <Button
+277:                variant="outlined"
+278:                color="primary"
+279:                onClick={handleLogout}
+280:                disabled={isLoggingOut}
+281:                sx={{ minWidth: { xs: '100%', xl: 108 } }}
+282:              >
+283:                Keluar
+284:              </Button>
+285:            </Stack>
+286:          </Toolbar>
+287:        </AppBar>
+288:
+289:        <Collapse in={dataSourceMode === 'http' && Boolean(hydrationError)}>
+290:          <Box sx={{ px: { xs: 2, md: 3.5 }, pt: 2 }}>
+291:            <Alert
+292:              severity="error"
+293:              action={
+294:                <Button
+295:                  color="inherit"
+296:                  size="small"
+297:                  onClick={() => {
+298:                    refreshSnapshot();
+299:                  }}
+300:                >
+301:                  Coba lagi
+302:                </Button>
+303:              }
+304:              sx={{
+305:                alignItems: 'center',
+306:                borderRadius: 3,
+307:              }}
+308:            >
+309:              Koneksi API sedang bermasalah. {hydrationError}
+310:            </Alert>
+311:          </Box>
+312:        </Collapse>
+313:
+314:        <Box sx={{ p: { xs: 2, md: 3.5 } }}>
+315:          <Outlet />
+316:        </Box>
+317:      </Box>
+318:    </Box>
+319:  );
+320:}
